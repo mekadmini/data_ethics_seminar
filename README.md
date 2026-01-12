@@ -2,3 +2,8 @@
 pip install -r requirements.txt
 python -m spacy download en_core_web_sm
 ```
+
+```bash
+ollama list
+ollama pull llama3
+```

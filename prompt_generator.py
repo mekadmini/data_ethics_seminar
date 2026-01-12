@@ -1,6 +1,9 @@
+import json
+import os
 from typing import List
 
 import pandas as pd
+from datasets import load_dataset
 from tqdm import tqdm
 
 from code_switcher import code_switch
@@ -51,46 +54,68 @@ class DatasetSwapper:
         return results
 
 
-# --- Main Execution Script ---
+def save_experiment(df: pd.DataFrame, config: dict, output_dir: str = "output"):
+    """
+    Saves the dataframe to CSV and the config to JSON.
+    """
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    # 1. Save Config
+    json_path = os.path.join(output_dir, "config.json")
+    with open(json_path, 'w') as f:
+        json.dump(config, f, indent=4)
+    print(f"Config saved to: {json_path}")
+
+    # 2. Save Data
+    csv_path = os.path.join(output_dir, "results.csv")
+    df.to_csv(csv_path, index=False)
+    print(f"Data saved to: {csv_path}")
+
 
 if __name__ == "__main__":
-    from datasets import load_dataset
+    # --- 1. Configuration ---
+    config = {
+        "matrix_language": MatrixLanguage.ENGLISH,
+        "embedded_languages": [EmbeddedLanguage.ARABIC, EmbeddedLanguage.GREEK, EmbeddedLanguage.SPANISH],
+        "swap_ratio": 0.4,
+        "batch_size": 10,
+        "content_swaps": True,
+        "func_swaps": True,
+        "dataset_split": "train[:20]"
+    }
 
-    # 1. Configuration
-    # We select the matrix language here. Since MatrixLanguage.ENGLISH is "en",
-    # we can use this variable directly for column selection.
-    matrix_lang = MatrixLanguage.ENGLISH
-
-    # 2. Load Data
-    print("Loading MultiJail dataset...")
-    # Using a small slice for demonstration
-    dataset = load_dataset("DAMO-NLP-SG/MultiJail", split='train[:20]')
+    # --- 2. Load Data ---
+    print(f"Loading MultiJail dataset ({config['dataset_split']})...")
+    dataset = load_dataset("DAMO-NLP-SG/MultiJail", split=config['dataset_split'])
     multijail = dataset.to_pandas()
 
-    # 3. Prepare Output DataFrame Dynamically
+    # --- 3. Prepare DataFrame ---
     csrt = pd.DataFrame()
     csrt['id'] = multijail['id']
 
-    # DYNAMIC SELECTION: Use the matrix_lang string ("en") to pick the column
-    csrt[matrix_lang] = multijail[matrix_lang]
+    # Dynamic column selection based on matrix language string
+    source_col = config["matrix_language"]
+    csrt[source_col] = multijail[source_col]
 
-    # 4. Initialize the Wrapper
-    processor = DatasetSwapper(matrix_lang)
+    # --- 4. Processing ---
+    processor = DatasetSwapper(config["matrix_language"])
 
-    # 5. Run the modular logic
-    print(f"Starting Code-Switching for matrix language: {matrix_lang}...")
+    print(f"Starting Code-Switching for matrix language: {source_col}...")
+
     switched_texts = processor.process_dataframe(
         df=csrt,
-        text_column=matrix_lang,
-        embedded_langs=[EmbeddedLanguage.GERMAN, EmbeddedLanguage.FRENCH],
-        swap_ratio=0.5,
-        batch_size=10
+        text_column=source_col,
+        embedded_langs=config["embedded_languages"],
+        swap_ratio=config["swap_ratio"],
+        batch_size=config["batch_size"]
     )
 
-    # 6. Save results
     csrt['csrt'] = switched_texts
+
+    # --- 5. Save Results & Parameters ---
+    save_experiment(csrt, config, output_dir="experiment_results")
 
     # Verify
     print("\nSample Output:")
-    # displaying the dynamic source column vs the switched column
-    print(csrt[[matrix_lang, 'csrt']].head(3))
+    print(csrt[[source_col, 'csrt']].head(3))
