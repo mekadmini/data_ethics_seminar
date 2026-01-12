@@ -1,2 +1,5 @@
 spacy
 deep-translator
+datasets
+pandas
+tqdm
