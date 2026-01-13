@@ -9,40 +9,21 @@ from lib.tagger import POSMasker
 
 def batch_translate(words_map: Dict[str, Set[str]]) -> Dict[str, Dict[str, str]]:
     """
-    Translates a set of words to multiple target languages efficiently.
-
-    Args:
-        words_map: A dictionary where keys are words to translate and values
-                   are sets of target language codes.
-                   Example: {'cat': {'de', 'fr'}, 'dog': {'de'}}
-
-    Returns:
-        A nested dictionary mapping words to their translations in specific languages.
-        Example: {'cat': {'de': 'Katze', 'fr': 'chat'}, ...}
+    (Same as before: Translates words efficiently)
     """
     results = {}
-
-    # Check if there is anything to translate to avoid empty processing
     if not words_map:
         return results
 
-    # In a production environment, this is where you would batch API calls
-    # to avoid hitting rate limits or high latency.
     for word, langs in words_map.items():
         results[word] = {}
         for lang in langs:
             try:
-                # Using deep_translator.
-                # Note: 'auto' source detection adds a small overhead;
-                # passing the source lang explicitly is faster if known.
                 translator = GoogleTranslator(source='auto', target=lang)
                 trans = translator.translate(word)
                 results[word][lang] = trans
-            except Exception as e:
-                # On failure, fallback to the original word
-                # print(f"Translation failed for '{word}' to {lang}: {e}")
+            except Exception:
                 results[word][lang] = word
-
     return results
 
 
@@ -50,28 +31,34 @@ def code_switch(input_sentences: List[str],
                 matrix_language: MatrixLanguage,
                 embedded_languages: List[EmbeddedLanguage],
                 swap_ratio: float,
+                language_weights: Optional[Dict[EmbeddedLanguage, float]] = None,
                 masker: Optional[POSMasker] = None,
                 content_attr_swaps: bool = True,
                 func_attr_swaps: bool = True) -> List[str]:
     """
-    Applies code-switching to a list of sentences based on POS tags and a probability ratio.
-
     Args:
-        input_sentences: List of source sentences.
-        matrix_language: The base language of the sentences.
-        embedded_languages: List of languages to switch into.
-        swap_ratio: Probability (0.0 to 1.0) that a candidate word gets switched.
-        masker: (Optional) Pre-initialized POSMasker instance.
-                Pass this to avoid reloading the spaCy model on every call.
-        content_attr_swaps: Whether to swap content words (Nouns, Verbs, etc.).
-        func_attr_swaps: Whether to swap function words (Det, Pronouns, etc.).
-
-    Returns:
-        List of code-switched sentences.
+        input_sentences: Source sentences.
+        matrix_language: Base language.
+        embedded_languages: List of allowed target languages.
+        swap_ratio: Global probability (0.0 - 1.0) that a word is switched.
+                    (e.g. 0.6 means 60% of candidate words are translated).
+        language_weights: (Optional) A dictionary defining the ratio between target languages.
+                          Example: {'el': 0.8, 'ar': 0.2}
+                          If None, all embedded_languages have equal probability.
     """
 
-    # 1. Setup Masker
-    # If a masker instance is not provided, create a temporary one (slower).
+    # 1. Prepare Weights for random selection
+    # We convert the dict to a list of weights aligned with the embedded_languages list
+    selection_weights = None
+    if language_weights:
+        # Default to 0.0 if a language is in the list but missing from the weights dict
+        selection_weights = [language_weights.get(lang, 0.0) for lang in embedded_languages]
+
+        # Safety check: avoid crash if weights sum to 0
+        if sum(selection_weights) == 0:
+            raise ValueError("Total sum of language_weights cannot be zero.")
+
+    # 2. Setup Masker
     if masker is None:
         masker = POSMasker(matrix_language)
 
@@ -81,27 +68,31 @@ def code_switch(input_sentences: List[str],
     if func_attr_swaps:
         allowed_tags.add(PossibleSwaps.FUNCTION_SWAP)
 
-    # masker.get_docs_and_masks returns a list of tuples: [(Doc, [True, False, ...]), ...]
+    # 3. Stochastic Selection
     batch_data = masker.get_docs_and_masks(input_sentences, allowed_tags)
-
-    # 2. Stochastic Selection
-    # Identify exactly which words need to be translated to which languages.
     unique_words_to_translate: Dict[str, Set[str]] = {}
-
-    # Store decisions to reconstruct sentences later without re-rolling the dice.
-    # Structure: decisions[sentence_idx][token_idx] = (should_swap: bool, target_lang: str)
     decisions = []
 
     for doc, mask in batch_data:
         sent_decisions = []
         for token, is_candidate in zip(doc, mask):
 
-            # Logic: If it's a valid POS AND the random roll hits the ratio
+            # Step A: Decide IF we swap (Global Ratio)
             if is_candidate and random.random() < swap_ratio:
-                # Pick a random embedded language uniformly
-                target_lang = random.choice(embedded_languages)
 
-                # Register this word for translation
+                # Step B: Decide WHICH language (Relative Weights)
+                if selection_weights:
+                    # Weighted choice
+                    target_lang = random.choices(
+                        population=embedded_languages,
+                        weights=selection_weights,
+                        k=1
+                    )[0]
+                else:
+                    # Uniform choice (default)
+                    target_lang = random.choice(embedded_languages)
+
+                # Register logic
                 if token.text not in unique_words_to_translate:
                     unique_words_to_translate[token.text] = set()
                 unique_words_to_translate[token.text].add(target_lang)
@@ -111,27 +102,20 @@ def code_switch(input_sentences: List[str],
                 sent_decisions.append((False, None))
         decisions.append(sent_decisions)
 
-    # 3. Batch Translation
-    # Perform the actual IO / API calls efficiently
+    # 4. Batch Translation
     translation_db = batch_translate(unique_words_to_translate)
 
-    # 4. Reconstruction
+    # 5. Reconstruction
     final_sentences = []
-
     for (doc, _), sent_decs in zip(batch_data, decisions):
         output_tokens = []
         for token, (do_swap, target_lang) in zip(doc, sent_decs):
-
             text = token.text
             if do_swap:
-                # Fetch translation from our pre-computed DB
-                # Safe access: .get(word).get(lang, fallback_to_original)
                 word_translations = translation_db.get(token.text, {})
                 text = word_translations.get(target_lang, token.text)
 
-            # Use token.whitespace_ to preserve original spacing (handles punctuation correctly)
             output_tokens.append(text + token.whitespace_)
-
         final_sentences.append("".join(output_tokens))
 
     return final_sentences

@@ -3,3 +3,4 @@ deep-translator
 datasets
 pandas
 tqdm
+ollama
