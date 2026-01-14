@@ -1,14 +1,18 @@
 class MatrixLanguage:
     ENGLISH = "en"
+    FRENCH = "fr"
+    GERMAN = "de"
+    GREEK = "el"
+    SPANISH = "es"
 
 
 class EmbeddedLanguage:
-    ENGLISH = "en"
-    GERMAN = "de"
-    FRENCH = "fr"
-    SPANISH = "es"
     ARABIC = "ar"
+    ENGLISH = "en"
+    FRENCH = "fr"
+    GERMAN = "de"
     GREEK = "el"
+    SPANISH = "es"
 
 
 class PossibleSwaps:

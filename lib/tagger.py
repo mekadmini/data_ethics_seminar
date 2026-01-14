@@ -10,6 +10,14 @@ class POSMasker:
         match matrix_language:
             case MatrixLanguage.ENGLISH:
                 model_name = "en_core_web_sm"
+            case MatrixLanguage.SPANISH:
+                model_name = "es_core_news_sm"
+            case MatrixLanguage.FRENCH:
+                model_name = "fr_core_news_sm"
+            case MatrixLanguage.GERMAN:
+                model_name = "de_core_news_sm"
+            case MatrixLanguage.GREEK:
+                model_name = "el_core_news_sm"
             case _:
                 raise NotImplementedError()
 

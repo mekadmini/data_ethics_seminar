@@ -6,7 +6,7 @@ import pandas as pd
 from datasets import load_dataset
 from tqdm import tqdm
 
-from code_switcher import code_switch
+from lib.code_switcher import code_switch
 from lib.custom_types import MatrixLanguage, EmbeddedLanguage
 from lib.tagger import POSMasker
 
@@ -125,30 +125,11 @@ if __name__ == "__main__":
     # --- 3. Prepare DataFrame ---
     csrt = pd.DataFrame()
     csrt['id'] = multijail['id']
-
-    # Robust Column Selection (Fixes the AttributeError)
-    mat_lang = config["matrix_language"]
-
-    # Check if it's an Enum with a .value attribute, otherwise treat as string
-    if hasattr(mat_lang, 'value'):
-        source_col = mat_lang.value
-    else:
-        source_col = str(mat_lang)
-
-    print(f"Selecting source column: '{source_col}'")
-
-    if source_col not in multijail.columns:
-        # Fallback for datasets that might use 'en' instead of 'english'
-        if source_col == 'english' and 'en' in multijail.columns:
-            source_col = 'en'
-            print(f"Redirecting to column 'en'...")
-        else:
-            raise ValueError(f"Column '{source_col}' not found. Available: {multijail.columns.tolist()}")
-
+    source_col = config["matrix_language"]
     csrt[source_col] = multijail[source_col]
 
     # --- 4. Processing ---
-    processor = DatasetSwapper(config["matrix_language"])
+    processor = DatasetSwapper(source_col)
 
     print(f"Starting Code-Switching for matrix language: {source_col}...")
 
