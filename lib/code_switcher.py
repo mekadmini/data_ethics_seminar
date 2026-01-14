@@ -113,8 +113,9 @@ def code_switch(input_sentences: List[str],
             text = token.text
             if do_swap:
                 word_translations = translation_db.get(token.text, {})
-                text = word_translations.get(target_lang, token.text)
-
+                translation = word_translations.get(target_lang, token.text)
+                if translation is not None:
+                    text = translation
             output_tokens.append(text + token.whitespace_)
         final_sentences.append("".join(output_tokens))
 

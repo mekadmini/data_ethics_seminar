@@ -3,6 +3,7 @@ class MatrixLanguage:
     FRENCH = "fr"
     GERMAN = "de"
     GREEK = "el"
+    ITALIAN = "it"
     SPANISH = "es"
 
 
@@ -12,6 +13,7 @@ class EmbeddedLanguage:
     FRENCH = "fr"
     GERMAN = "de"
     GREEK = "el"
+    ITALIAN = "it"
     SPANISH = "es"
 
 

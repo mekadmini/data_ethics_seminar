@@ -7,19 +7,18 @@ from lib.custom_types import MatrixLanguage, PossibleSwaps
 
 class POSMasker:
     def __init__(self, matrix_language: MatrixLanguage):
-        match matrix_language:
-            case MatrixLanguage.ENGLISH:
-                model_name = "en_core_web_sm"
-            case MatrixLanguage.SPANISH:
-                model_name = "es_core_news_sm"
-            case MatrixLanguage.FRENCH:
-                model_name = "fr_core_news_sm"
-            case MatrixLanguage.GERMAN:
-                model_name = "de_core_news_sm"
-            case MatrixLanguage.GREEK:
-                model_name = "el_core_news_sm"
-            case _:
-                raise NotImplementedError()
+        model_map = {
+            MatrixLanguage.ENGLISH: "en_core_web_sm",
+            MatrixLanguage.SPANISH: "es_core_news_sm",
+            MatrixLanguage.FRENCH: "fr_core_news_sm",
+            MatrixLanguage.GERMAN: "de_core_news_sm",
+            MatrixLanguage.GREEK: "el_core_news_sm",
+            MatrixLanguage.ITALIAN: "it_core_news_sm"
+        }
+        try:
+            model_name = model_map[matrix_language]
+        except:
+            raise NotImplementedError()
 
         # Load once, disable unused components
         self.nlp = spacy.load(model_name, disable=["ner", "parser", "lemmatizer"])

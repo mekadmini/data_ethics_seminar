@@ -92,7 +92,7 @@ if __name__ == "__main__":
     # --- 1. Configuration ---
     config = {
         # Ensure this matches your Enum definition or use string "en"
-        "matrix_language": MatrixLanguage.ENGLISH,
+        "matrix_language": MatrixLanguage.ITALIAN,
 
         "embedded_languages": [
             EmbeddedLanguage.ARABIC,
