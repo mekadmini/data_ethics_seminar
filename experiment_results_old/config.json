@@ -1,0 +1,13 @@
+{
+  "matrix_language": "en",
+  "embedded_languages": [
+    "ar",
+    "el",
+    "es"
+  ],
+  "swap_ratio": 0.4,
+  "batch_size": 10,
+  "content_swaps": true,
+  "func_swaps": true,
+  "dataset_split": "train[:20]"
+}
