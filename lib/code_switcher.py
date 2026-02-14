@@ -27,25 +27,49 @@ def get_argos_translator(from_code: str, to_code: str):
     except Exception:
         return None
 
+def clean_translation(original: str, translated: str) -> str:
+    """
+    Sanitizes translation output.
+    1. Removes known artifacts (e.g., '♪' from Argos IT->EN model).
+    2. Fallbacks to original if translation is empty/invalid.
+    """
+    if not translated or not translated.strip():
+        return original
+    
+    # Specific artifact observed in Argos Translate (IT -> EN) for "mia"
+    if "♪" in translated:
+        return original
+        
+    return translated
+
 def translate_text_argos(text: str, from_code: str, to_code: str) -> str:
     """
     Translates text using Argos Translate (Local).
     Tries direct translation first, then pivots through English.
     """
+    result = text
+    
     # 1. Direct Translation
     translator = get_argos_translator(from_code, to_code)
     if translator:
-        return translator.translate(text)
+        result = translator.translate(text)
     
-    # 2. Pivot through English
-    if from_code != 'en' and to_code != 'en':
+    # 2. Pivot through English (if direct failed or not available)
+    # Note: If direct translator existed, we used it. 
+    # But if text == result (meaning no change? prompt generator expects change usually)
+    # logic here was: if translator exists, use it.
+    
+    elif from_code != 'en' and to_code != 'en':
         t1 = get_argos_translator(from_code, 'en')
         t2 = get_argos_translator('en', to_code)
         if t1 and t2:
-            return t2.translate(t1.translate(text))
+            step1 = t1.translate(text)
+            # Check for artifact in intermediate step
+            if "♪" in step1:
+                return text # Fast fail back to original
+            result = t2.translate(step1)
 
-    # 3. Fallback
-    return text
+    return clean_translation(text, result)
 
 def translate_text_google(text: str, to_code: str) -> str:
     """
@@ -53,7 +77,8 @@ def translate_text_google(text: str, to_code: str) -> str:
     """
     try:
         # deep_translator handles 'auto' source well, or we can be explicit
-        return GoogleTranslator(source='auto', target=to_code).translate(text)
+        res = GoogleTranslator(source='auto', target=to_code).translate(text)
+        return clean_translation(text, res)
     except Exception as e:
         print(f"⚠️ Google API Error: {e}")
         return text
