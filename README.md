@@ -10,10 +10,13 @@ It systematically generates adversarial prompts by embedding words from differen
     - **Swap Ratios**: 10%, 30%, 50%, 70%, 90%
     - **Language Strategies**: Arabic Dominant, Greek Dominant, Spanish Dominant, Balanced
 - **Robust Evaluation**:
-    - Generates **10 responses per prompt** to account for LLM stochasticity.
-    - Uses **LlamaGuard** (via Ollama) as an automated safety judge.
-    - Streams results to CSV to prevent data loss.
-- **Multilingual Support**: Supports English, andItalian as a matrix language and embeddings from Arabic, Greek, and Spanish.
+    - **Multi-Iteration Translation**: Generates **N variations** per prompt (default: 10) to account for translation stochasticity.
+    - **Multi-Iteration Attack**: Queries the target model **M times** per variation (default: 10) to account for generation stochasticity.
+    - **Total Coverage**: 100 attempts per original prompt.
+- **Hybrid Translation Engine**:
+    - **Local (Default)**: Uses **Argos Translate** with pivoting (IT -> EN -> Target) for offline, quota-free operation.
+    - **Online (Optional)**: Support for **Google Translate API** via flag.
+- **Automated Safety Judge**: Uses **LlamaGuard** (via Ollama).
 
 ## 🛠️ Installation
 
@@ -37,13 +40,19 @@ It systematically generates adversarial prompts by embedding words from differen
    pip install -r requirements.txt
    ```
 
-4. **Download SpaCy models**:
+4. **Setup Translation Models (Crucial)**:
+   This script downloads the necessary offline translation models (approx. 1GB) based on the languages defined in `lib/custom_types.py`.
+   ```bash
+   python scripts/setup_translation_models.py
+   ```
+
+5. **Download SpaCy models**:
    ```bash
    python -m spacy download en_core_web_sm # English
    python -m spacy download it_core_news_sm # Italian
    ```
 
-5. **Setup Ollama**:
+6. **Setup Ollama**:
    Ensure [Ollama](https://ollama.com/) is installed and running. Pull the required models:
    ```bash
    ollama pull llama3       # Target Model
@@ -52,16 +61,22 @@ It systematically generates adversarial prompts by embedding words from differen
 
 ## 🏃 Usage
 
-### Run the Full Study
-The main entry point is `study_runner.py`. This script executes the full grid search over all configured scenarios.
+### Run the Full Study (Local / Default)
+The main entry point is `study_runner.py`. This runs the full grid search using **local translation** (Argos).
 
 ```bash
 python study_runner.py
 ```
 
+### Run with Google Translate (Online)
+To use the Google API instead of local models:
+```bash
+python study_runner.py --use_google
+```
+
 This will:
-1. Generate code-switched prompts for **20 different scenarios**.
-2. Query the target model (Llama3) **10 times** for each prompt.
+1. Generate **10 code-switched variations** for each original prompt in **20 different scenarios**.
+2. Query the target model (Llama3) **10 times** for *each* variation (Total: 100 queries per original prompt).
 3. Evaluate safety using LlamaGuard.
 4. Save results to `experiment_results/study_<timestamp>/`.
 5. Print the **Winning Configuration** (highest ASR) at the end.
@@ -69,7 +84,8 @@ This will:
 ### Customizing the Study
 Edit `study_runner.py` to adjust:
 - `dataset_split`: Number of prompts to use (e.g., `"train[:100]"`).
-- `iterations`: Number of responses per prompt (default: 10).
+- `translation_iterations`: Number of translation variations per source prompt (default: 10).
+- `iterations`: Number of responses per variation (default: 10).
 - `swap_ratios` & `strategies`: The grid search parameters.
 
 ### Single Experiment

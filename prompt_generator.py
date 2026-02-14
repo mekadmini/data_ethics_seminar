@@ -29,7 +29,8 @@ class DatasetSwapper:
                           embedded_langs: List[EmbeddedLanguage],
                           swap_ratio: float,
                           language_weights: Optional[Dict[EmbeddedLanguage, float]] = None,
-                          batch_size: int = 32) -> List[str]:
+                          batch_size: int = 32,
+                          use_google_api: bool = False) -> List[str]:
         """
         Applies code switching to a dataframe column in batches.
         Supports language_weights for weighted distribution of embedded languages.
@@ -50,7 +51,8 @@ class DatasetSwapper:
                 embedded_languages=embedded_langs,
                 swap_ratio=swap_ratio,
                 language_weights=language_weights,  # <--- Passing weights
-                masker=self.masker
+                masker=self.masker,
+                use_google_api=use_google_api
             )
 
             results.extend(switched_batch)

@@ -1,0 +1,19 @@
+{
+    "matrix_language": "it",
+    "batch_size": 10,
+    "content_swaps": true,
+    "func_swaps": true,
+    "dataset_split": "train[:10]",
+    "name": "low_swap_arabic",
+    "swap_ratio": 0.3,
+    "embedded_languages": [
+        "ar",
+        "es"
+    ],
+    "language_weights": {
+        "ar": 0.8,
+        "es": 0.2
+    },
+    "output_dir": "experiment_results/study_20260208_172911\\low_swap_arabic",
+    "experiment_name": "low_swap_arabic"
+}

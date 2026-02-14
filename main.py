@@ -36,8 +36,20 @@ def generate_prompts(args=None, config=None):
             "content_swaps": True,
             "func_swaps": True,
             "dataset_split": "train[:20]",
-            "experiment_name": "default_experiment"
+            "experiment_name": "default_experiment",
+            "use_google_api": False
         }
+
+    # Override config with args if present
+    if args:
+        if hasattr(args, 'use_google') and args.use_google:
+             config['use_google_api'] = True
+        if hasattr(args, 'dataset_split') and args.dataset_split:
+             config['dataset_split'] = args.dataset_split
+        if hasattr(args, 'translation_iterations') and args.translation_iterations:
+             config['translation_iterations'] = args.translation_iterations
+        if hasattr(args, 'batch_size') and args.batch_size:
+             config['batch_size'] = args.batch_size
 
     # Determine unique output directory
     # If config allows specifying an output root, use it. Otherwise default.
@@ -55,33 +67,61 @@ def generate_prompts(args=None, config=None):
     multijail = dataset.to_pandas()
 
     # --- 3. Prepare DataFrame ---
-    csrt = pd.DataFrame()
-    csrt['id'] = multijail['id']
+    # We will expand the dataframe to have multiple rows per prompt if iterations > 1
+    iterations = config.get("translation_iterations", 1)
+    print(f"Generating {iterations} variations per prompt...")
+
+    all_results = []
+    
     source_col = config["matrix_language"]
-    csrt[source_col] = multijail[source_col]
-
-    # --- 4. Processing ---
     processor = DatasetSwapper(source_col)
+    
+    # Pre-check logic
+    use_google = config.get('use_google_api', False)
+    if not use_google:
+        try:
+            import argostranslate.package
+        except ImportError:
+            print("Wrapper: argostranslate not found!")
+    else:
+        print("Using Google Translate API (Online)...")
+    
+    for i in range(iterations):
+        print(f"--- Translation Iteration {i+1}/{iterations} ---")
+        
+        # Create a temp copy for this iteration
+        temp_df = pd.DataFrame()
+        temp_df['id'] = multijail['id']
+        temp_df[source_col] = multijail[source_col]
+        
+        # Apply Code Switching
+        switched_texts = processor.process_dataframe(
+            df=temp_df,
+            text_column=source_col,
+            embedded_langs=config["embedded_languages"],
+            swap_ratio=config["swap_ratio"],
+            language_weights=config["language_weights"],
+            batch_size=config["batch_size"],
+            use_google_api=use_google  # <--- Pass flag
+        )
+        
+        temp_df['csrt'] = switched_texts
+        temp_df['translation_iter'] = i + 1
+        
+        all_results.append(temp_df)
 
-    print(f"Starting Code-Switching for matrix language: {source_col}...")
-
-    switched_texts = processor.process_dataframe(
-        df=csrt,
-        text_column=source_col,
-        embedded_langs=config["embedded_languages"],
-        swap_ratio=config["swap_ratio"],
-        language_weights=config["language_weights"],  # Passing the weights
-        batch_size=config["batch_size"]
-    )
-
-    csrt['csrt'] = switched_texts
+    # Combine all iterations
+    csrt = pd.concat(all_results, ignore_index=True)
+    
+    # Sort by ID to keep variations together
+    csrt = csrt.sort_values(by=['id', 'translation_iter'])
 
     # --- 5. Save Results & Parameters ---
     save_experiment(csrt, config, output_dir=output_dir)
 
     # Verify
     print("\nSample Output:")
-    print(csrt[[source_col, 'csrt']].head(3))
+    print(csrt[[source_col, 'csrt', 'translation_iter']].head(3))
     
     return output_dir
 
@@ -137,6 +177,10 @@ def main():
 
     # --- Command 1: generate-prompts ---
     parser_greet = subparsers.add_parser('generate', help='Generate code-switched prompts')
+    parser_greet.add_argument('--use_google', action='store_true', help='Use Google Translate API instead of local Argos')
+    parser_greet.add_argument('--dataset_split', type=str, help='Dataset split (e.g. train[:10])')
+    parser_greet.add_argument('--translation_iterations', type=int, help='Number of translation variations per prompt')
+    parser_greet.add_argument('--batch_size', type=int, help='Batch size for processing')
     parser_greet.set_defaults(func=generate_prompts)
 
     # --- Command 2: experiment ---

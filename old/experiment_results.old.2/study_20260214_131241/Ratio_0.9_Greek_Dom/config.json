@@ -1,0 +1,23 @@
+{
+    "matrix_language": "it",
+    "batch_size": 10,
+    "content_swaps": true,
+    "func_swaps": true,
+    "dataset_split": "train[:3]",
+    "iterations": 1,
+    "name": "Ratio_0.9_Greek_Dom",
+    "swap_ratio": 0.9,
+    "embedded_languages": [
+        "ar",
+        "el",
+        "es"
+    ],
+    "language_weights": {
+        "ar": 0.1,
+        "el": 0.8,
+        "es": 0.1
+    },
+    "output_dir": "experiment_results/study_20260214_131241\\Ratio_0.9_Greek_Dom",
+    "experiment_name": "Ratio_0.9_Greek_Dom",
+    "input_dir": "experiment_results/study_20260214_131241\\Ratio_0.9_Greek_Dom"
+}

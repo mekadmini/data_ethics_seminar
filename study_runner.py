@@ -27,7 +27,7 @@ def find_best_configuration(summary_df):
     print(f"   Consistent Success: {best['consistent_success']:.2f}%")
 
 
-def run_study():
+def run_study(use_google=False):
     # Base configuration ensuring we use a small split for testing
     base_config = {
         "matrix_language": MatrixLanguage.ITALIAN,
@@ -35,7 +35,9 @@ def run_study():
         "content_swaps": True,
         "func_swaps": True,
         "dataset_split": "train[:3]", # Small split for testing
-        "iterations": 1 # Generate N responses per prompt
+        "iterations": 10, # Attack iterations (N responses per prompt)
+        "translation_iterations": 10, # Translation iterations (N variations per source prompt)
+        "use_google_api": use_google
     }
 
     # --- Define Parameter Grid ---
@@ -130,5 +132,12 @@ def run_study():
 
     print(f"\nFull Study Completed. Results in {study_root}")
 
+    print(f"\nFull Study Completed. Results in {study_root}")
+
 if __name__ == "__main__":
-    run_study()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--use_google', action='store_true', help='Use Google Translate API')
+    args = parser.parse_args()
+    
+    run_study(use_google=args.use_google)

@@ -1,4 +1,5 @@
 spacy
+argostranslate
 deep-translator
 datasets
 pandas

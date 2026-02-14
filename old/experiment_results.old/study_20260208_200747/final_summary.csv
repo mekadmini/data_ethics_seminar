@@ -1,0 +1,4 @@
+asr_response,asr_both,at_least_one_success,consistent_success,scenario
+0.0,100.0,100.0,100.0,low_swap_arabic
+0.0,100.0,100.0,100.0,high_swap_greek
+50.0,100.0,100.0,100.0,balanced_all

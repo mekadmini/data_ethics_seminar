@@ -1,80 +1,55 @@
 import random
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Set, Optional
 
+import argostranslate.package
+import argostranslate.translate
 from deep_translator import GoogleTranslator
 
 from lib.custom_types import MatrixLanguage, EmbeddedLanguage, PossibleSwaps
 from lib.tagger import POSMasker
 
 # --- Configuration ---
-MAX_WORKERS = 8
-BATCH_SIZE = 50  # Process 50 words per request to keep it snappy
+# Argos Translate runs locally. Google runs online.
 
-
-def translate_chunk(lang: str, words: List[str]) -> tuple:
+def get_argos_translator(from_code: str, to_code: str):
     """
-    Helper function to run inside a thread.
-    Returns: (lang, {original: translated})
+    Returns a translation object for Argos.
     """
     try:
-        translator = GoogleTranslator(source='auto', target=lang)
-        # deep_translator handles the list, but we chunked it safely first
-        translated_list = translator.translate_batch(words)
+        return argostranslate.translate.get_translation_from_codes(from_code, to_code)
+    except Exception:
+        return None
 
-        # Zip them back into a dict
-        return lang, dict(zip(words, translated_list))
+def translate_text_argos(text: str, from_code: str, to_code: str) -> str:
+    """
+    Translates text using Argos Translate (Local).
+    Tries direct translation first, then pivots through English.
+    """
+    # 1. Direct Translation
+    translator = get_argos_translator(from_code, to_code)
+    if translator:
+        return translator.translate(text)
+    
+    # 2. Pivot through English
+    if from_code != 'en' and to_code != 'en':
+        t1 = get_argos_translator(from_code, 'en')
+        t2 = get_argos_translator('en', to_code)
+        if t1 and t2:
+            return t2.translate(t1.translate(text))
+
+    # 3. Fallback
+    return text
+
+def translate_text_google(text: str, to_code: str) -> str:
+    """
+    Translates text using Google Translate (Online).
+    """
+    try:
+        # deep_translator handles 'auto' source well, or we can be explicit
+        return GoogleTranslator(source='auto', target=to_code).translate(text)
     except Exception as e:
-        print(f"⚠️ Error on {lang} chunk: {e}")
-        # Return original words on failure so we don't lose data
-        return lang, {w: w for w in words}
-
-
-def batch_translate(words_map: Dict[str, Set[str]]) -> Dict[str, Dict[str, str]]:
-    results = {}
-    if not words_map:
-        return results
-
-    # 1. Flatten and Group by Language
-    # We want to create tasks like: ("es", ["word1", "word2"...])
-    full_batches: Dict[str, List[str]] = {}
-
-    for word, langs in words_map.items():
-        results[word] = {}  # Init result container
-        for lang in langs:
-            if lang not in full_batches:
-                full_batches[lang] = []
-            full_batches[lang].append(word)
-
-    # 2. Create smaller tasks (Chunks)
-    # If we have 1000 words in Spanish, we split them into 20 tasks of 50 words.
-    # This ensures one huge language doesn't block the threads.
-    tasks = []
-    for lang, all_words in full_batches.items():
-        for i in range(0, len(all_words), BATCH_SIZE):
-            chunk = all_words[i: i + BATCH_SIZE]
-            tasks.append((lang, chunk))
-
-    print(f"🚀 Dispatching {len(tasks)} translation tasks across {MAX_WORKERS} threads...")
-
-    # 3. Execute in Parallel
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        # Submit all tasks
-        future_to_task = {
-            executor.submit(translate_chunk, lang, chunk): (lang, chunk)
-            for lang, chunk in tasks
-        }
-
-        # Process as they finish
-        for future in as_completed(future_to_task):
-            lang, translation_dict = future.result()
-
-            # 4. Map back to main results
-            for original, translated in translation_dict.items():
-                results[original][lang] = translated
-
-    return results
-
+        print(f"⚠️ Google API Error: {e}")
+        return text
 
 def code_switch(input_sentences: List[str],
                 matrix_language: MatrixLanguage,
@@ -83,27 +58,17 @@ def code_switch(input_sentences: List[str],
                 language_weights: Optional[Dict[EmbeddedLanguage, float]] = None,
                 masker: Optional[POSMasker] = None,
                 content_attr_swaps: bool = True,
-                func_attr_swaps: bool = True) -> List[str]:
+                func_attr_swaps: bool = True,
+                use_google_api: bool = False) -> List[str]:
     """
     Args:
-        input_sentences: Source sentences.
-        matrix_language: Base language.
-        embedded_languages: List of allowed target languages.
-        swap_ratio: Global probability (0.0 - 1.0) that a word is switched.
-                    (e.g. 0.6 means 60% of candidate words are translated).
-        language_weights: (Optional) A dictionary defining the ratio between target languages.
-                          Example: {'el': 0.8, 'ar': 0.2}
-                          If None, all embedded_languages have equal probability.
+        use_google_api: If True, uses Google Translate (online). If False, uses Argos (local).
     """
 
-    # 1. Prepare Weights for random selection
-    # We convert the dict to a list of weights aligned with the embedded_languages list
+    # 1. Prepare Weights
     selection_weights = None
     if language_weights:
-        # Default to 0.0 if a language is in the list but missing from the weights dict
         selection_weights = [language_weights.get(lang, 0.0) for lang in embedded_languages]
-
-        # Safety check: avoid crash if weights sum to 0
         if sum(selection_weights) == 0:
             raise ValueError("Total sum of language_weights cannot be zero.")
 
@@ -119,29 +84,20 @@ def code_switch(input_sentences: List[str],
 
     # 3. Stochastic Selection
     batch_data = masker.get_docs_and_masks(input_sentences, allowed_tags)
+    
+    # Map: word -> set of target_languages needed
     unique_words_to_translate: Dict[str, Set[str]] = {}
     decisions = []
 
     for doc, mask in batch_data:
         sent_decisions = []
         for token, is_candidate in zip(doc, mask):
-
-            # Step A: Decide IF we swap (Global Ratio)
             if is_candidate and random.random() < swap_ratio:
-
-                # Step B: Decide WHICH language (Relative Weights)
                 if selection_weights:
-                    # Weighted choice
-                    target_lang = random.choices(
-                        population=embedded_languages,
-                        weights=selection_weights,
-                        k=1
-                    )[0]
+                    target_lang = random.choices(embedded_languages, weights=selection_weights, k=1)[0]
                 else:
-                    # Uniform choice (default)
                     target_lang = random.choice(embedded_languages)
 
-                # Register logic
                 if token.text not in unique_words_to_translate:
                     unique_words_to_translate[token.text] = set()
                 unique_words_to_translate[token.text].add(target_lang)
@@ -151,8 +107,25 @@ def code_switch(input_sentences: List[str],
                 sent_decisions.append((False, None))
         decisions.append(sent_decisions)
 
-    # 4. Batch Translation
-    translation_db = batch_translate(unique_words_to_translate)
+    # 4. Batch Translation (Sequential Loop)
+    translation_db = {}
+    source_code = matrix_language.value if hasattr(matrix_language, 'value') else str(matrix_language)
+    
+    engine_name = "Google API" if use_google_api else "Argos Local"
+    print(f"🚀 Translating {len(unique_words_to_translate)} unique words from {source_code} using {engine_name}...")
+
+    for word, target_langs in unique_words_to_translate.items():
+        translation_db[word] = {}
+        for target_lang in target_langs:
+            target_code = target_lang.value if hasattr(target_lang, 'value') else str(target_lang)
+            
+            # Perform Translation
+            if use_google_api:
+                translated_word = translate_text_google(word, target_code)
+            else:
+                translated_word = translate_text_argos(word, source_code, target_code)
+                
+            translation_db[word][target_lang] = translated_word
 
     # 5. Reconstruction
     final_sentences = []
@@ -161,11 +134,13 @@ def code_switch(input_sentences: List[str],
         for token, (do_swap, target_lang) in zip(doc, sent_decs):
             text = token.text
             if do_swap:
-                word_translations = translation_db.get(token.text, {})
-                translation = word_translations.get(target_lang, token.text)
-                if translation is not None:
-                    text = translation
+                # Retrieve translation
+                translation = translation_db.get(token.text, {}).get(target_lang, token.text)
+                if translation is None:
+                    translation = token.text
+                text = translation
             output_tokens.append(text + token.whitespace_)
         final_sentences.append("".join(output_tokens))
 
     return final_sentences
+
