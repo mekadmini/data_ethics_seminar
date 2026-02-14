@@ -16,6 +16,9 @@ It systematically generates adversarial prompts by embedding words from differen
 - **Hybrid Translation Engine**:
     - **Local (Default)**: Uses **Argos Translate** with pivoting (IT -> EN -> Target) for offline, quota-free operation.
     - **Online (Optional)**: Support for **Google Translate API** via flag.
+- **Performance Optimizations**:
+    - **Parallel Execution**: Multi-threaded LLM generation (`--max_workers`).
+    - **Smart Caching**: Resumes interrupted experiments automatically (`--resume_from`) and caches translations.
 - **Automated Safety Judge**: Uses **LlamaGuard** (via Ollama).
 
 ## 🛠️ Installation
@@ -65,13 +68,20 @@ It systematically generates adversarial prompts by embedding words from differen
 The main entry point is `study_runner.py`. This runs the full grid search using **local translation** (Argos).
 
 ```bash
+# Run with default settings (4 threads)
 python study_runner.py
+
+# Resume an interrupted study
+python study_runner.py --resume_from experiment_results/study_20240214_123456
+
+# Run with 8 threads for faster generation
+python study_runner.py --max_workers 8
 ```
 
 ### Run with Google Translate (Online)
 To use the Google API instead of local models:
 ```bash
-python study_runner.py --use_google
+python study_runner.py --use_google --max_workers 4
 ```
 
 This will:
@@ -86,6 +96,7 @@ Edit `study_runner.py` to adjust:
 - `dataset_split`: Number of prompts to use (e.g., `"train[:100]"`).
 - `translation_iterations`: Number of translation variations per source prompt (default: 10).
 - `iterations`: Number of responses per variation (default: 10).
+- `max_workers`: Number of parallel threads for generation (default: 4).
 - `swap_ratios` & `strategies`: The grid search parameters.
 
 ### Single Experiment

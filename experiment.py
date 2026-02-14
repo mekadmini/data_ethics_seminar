@@ -2,8 +2,13 @@ import csv
 import os
 
 import ollama
+import concurrent.futures
+import threading
 import pandas as pd
 from tqdm import tqdm
+
+# Lock for thread-safe file writing
+write_lock = threading.Lock()
 
 
 class OllamaHandler:
@@ -18,56 +23,94 @@ class OllamaHandler:
             return f"[ERROR] {str(e)}"
 
 
-def generate_and_save_stream(input_csv, output_csv, prompt_col, model_name, iterations=1):
+def generate_and_save_stream(input_csv, output_csv, prompt_col, model_name, iterations=1, max_workers=4):
     """
     Stage 1: Reads prompts, generates answers, and appends to CSV immediately.
-    Supports multiple iterations per prompt to account for stochasticity.
+    Supports parallel execution and resuming from previous runs.
     """
-    print(f"🚀 STAGE 1: Generating with {model_name} (Iterations: {iterations})...")
+    print(f"🚀 STAGE 1: Generating with {model_name} (Iterations: {iterations}, Threads: {max_workers})...")
 
     if not os.path.exists(input_csv):
         raise FileNotFoundError(f"Input file {input_csv} not found.")
 
     df = pd.read_csv(input_csv)
-    handler = OllamaHandler(model_name)
-
-    # Check if output exists to determine if we need to write headers
+    
+    # --- 1. Load Caching (Resume Capability) ---
+    completed_keys = set()
     file_exists = os.path.exists(output_csv)
+    
+    if file_exists:
+        try:
+            df_out = pd.read_csv(output_csv)
+            # Create a set of (prompt, iteration) to check for existence
+            # We assume prompt is unique enough or use ID if available, but prompt is the key here.
+            # Using prompt text as key might be shaky if prompts are long/multiline, but it's consistent with current logic.
+            for _, row in df_out.iterrows():
+                if prompt_col in row and 'iteration' in row:
+                    completed_keys.add((str(row[prompt_col]), int(row['iteration'])))
+            print(f"🔄 Resuming: Found {len(completed_keys)} already completed items.")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not read existing output file for resuming: {e}")
 
-    # We open the file in 'append' mode ('a') with buffering=1 (line buffering)
+    # --- 2. Prepare Tasks ---
+    # We flatten the workload: (row, iteration_id)
+    work_items = []
+    for _, row in df.iterrows():
+        text = str(row[prompt_col]) if not pd.isna(row[prompt_col]) else ""
+        for i in range(iterations):
+            if (text, i + 1) not in completed_keys:
+                work_items.append((text, i + 1))
+    
+    total_work = len(work_items)
+    if total_work == 0:
+        print("✅ All items already completed. Skipping Stage 1.")
+        return
+
+    # --- 3. Parallel Execution ---
+    # We open file once and write with lock
+    # Note: Opening in 'a' mode outside threads is better
+    
+    handler = OllamaHandler(model_name)
+    
+    # Helper function for one task
+    def process_item(item):
+        text, iter_num = item
+        try:
+            if text.strip():
+                response = handler.chat([{'role': 'user', 'content': text}])
+            else:
+                response = ""
+            return (text, response, iter_num)
+        except Exception as e:
+            return (text, f"[ERROR] {e}", iter_num)
+
+    # Open file context
     with open(output_csv, mode='a', newline='', encoding='utf-8') as f:
-        # Define columns: Original Prompt + New Response + Iteration ID
         fieldnames = [prompt_col, f"response_{model_name}", "iteration"]
         writer = csv.DictWriter(f, fieldnames=fieldnames)
-
-        # Write header only if file is new
+        
         if not file_exists:
             writer.writeheader()
-
-        print(f"💾 Saving to: {output_csv}")
-
-        for _, row in tqdm(df.iterrows(), total=len(df), desc="Prompts"):
-            text = row[prompt_col]
-            text_str = str(text) if not pd.isna(text) else ""
-
-            for i in range(iterations):
-                # Generate
-                if text_str.strip():
-                    response = handler.chat([{'role': 'user', 'content': text_str}])
-                else:
-                    response = ""
-
-                # Write IMMEDIATELY to disk
-                writer.writerow({
-                    prompt_col: text_str,
-                    f"response_{model_name}": response,
-                    "iteration": i + 1
-                })
-
-                # Force write to disk
-                f.flush()
-                os.fsync(f.fileno())
-
+            file_exists = True # Sentinal to not write again
+            
+        print(f"💾 Streaming results to: {output_csv}")
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # map preserves order usually, but distinct futures allow tqdm
+            futures = {executor.submit(process_item, item): item for item in work_items}
+            
+            for future in tqdm(concurrent.futures.as_completed(futures), total=total_work, desc="Generating"):
+                result = future.result()
+                text, response, iter_num = result
+                
+                with write_lock:
+                    writer.writerow({
+                        prompt_col: text,
+                        f"response_{model_name}": response,
+                        "iteration": iter_num
+                    })
+                    f.flush()
+                    
     print("✅ Stage 1 Complete.")
 
 

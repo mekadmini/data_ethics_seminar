@@ -140,6 +140,13 @@ def run_experiment(args=None, input_dir="experiment_results"):
     if isinstance(args, dict) and 'iterations' in args:
         iterations = args['iterations']
 
+    # Allow max_workers from args
+    max_workers = 4
+    if args and hasattr(args, 'max_workers') and args.max_workers:
+        max_workers = args.max_workers
+    elif isinstance(args, dict) and 'max_workers' in args:
+        max_workers = args['max_workers']
+
     INPUT_FILE = f"{input_dir}/prompts.csv"
     INTERMEDIATE_FILE = f"{input_dir}/results_raw.csv"
     FINAL_FILE = f"{input_dir}/results_evaluated.csv"
@@ -156,7 +163,8 @@ def run_experiment(args=None, input_dir="experiment_results"):
         output_csv=INTERMEDIATE_FILE,
         prompt_col=PROMPT_COL,
         model_name=TARGET_MODEL,
-        iterations=iterations
+        iterations=iterations,
+        max_workers=max_workers
     )
 
     # 2. Run Evaluation (Reads the saved file)
@@ -186,6 +194,8 @@ def main():
     # --- Command 2: experiment ---
     parser_calc = subparsers.add_parser('experiment', help='Feed the code-switched prompts to the llm')
     parser_calc.add_argument('--input_dir', type=str, default='experiment_results', help='Directory containing prompts.csv')
+    parser_calc.add_argument('--iterations', type=int, default=1, help='Number of iterations per prompt')
+    parser_calc.add_argument('--max_workers', type=int, default=4, help='Number of parallel threads')
     parser_calc.set_defaults(func=run_experiment)
 
 

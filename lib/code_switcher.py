@@ -11,6 +11,13 @@ from lib.tagger import POSMasker
 # --- Configuration ---
 # Argos Translate runs locally. Google runs online.
 
+from functools import lru_cache
+
+# ... imports ...
+
+# Argos Translate runs locally. Google runs online.
+
+@lru_cache(maxsize=None)
 def get_argos_translator(from_code: str, to_code: str):
     """
     Returns a translation object for Argos.

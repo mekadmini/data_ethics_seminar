@@ -27,7 +27,7 @@ def find_best_configuration(summary_df):
     print(f"   Consistent Success: {best['consistent_success']:.2f}%")
 
 
-def run_study(use_google=False):
+def run_study(use_google=False, max_workers=4, resume_from=None):
     # Base configuration ensuring we use a small split for testing
     base_config = {
         "matrix_language": MatrixLanguage.ITALIAN,
@@ -37,7 +37,8 @@ def run_study(use_google=False):
         "dataset_split": "train[:3]", # Small split for testing
         "iterations": 10, # Attack iterations (N responses per prompt)
         "translation_iterations": 10, # Translation iterations (N variations per source prompt)
-        "use_google_api": use_google
+        "use_google_api": use_google,
+        "max_workers": max_workers
     }
 
     # --- Define Parameter Grid ---
@@ -80,12 +81,18 @@ def run_study(use_google=False):
             "language_weights": weights
         })
 
+    # --- Determine Output Directory ---
+    if resume_from:
+        study_root = resume_from
+        if not os.path.exists(study_root):
+            raise FileNotFoundError(f"Resume directory not found: {study_root}")
+        print(f"🔄 Resuming Study from {study_root}...")
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        study_root = f"experiment_results/study_{timestamp}"
+        os.makedirs(study_root, exist_ok=True)
+        print(f"Starting New Study at {study_root}...")
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    study_root = f"experiment_results/study_{timestamp}"
-    os.makedirs(study_root, exist_ok=True)
-
-    print(f"Starting Study at {study_root}...")
     print(f"Total Scenarios to run: {len(study_scenarios)}")
 
     summary_results = []
@@ -132,12 +139,13 @@ def run_study(use_google=False):
 
     print(f"\nFull Study Completed. Results in {study_root}")
 
-    print(f"\nFull Study Completed. Results in {study_root}")
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--use_google', action='store_true', help='Use Google Translate API')
+    parser.add_argument('--max_workers', type=int, default=4, help='Number of parallel threads for LLM generation')
+    parser.add_argument('--resume_from', type=str, default=None, help='Directory to resume the study from (e.g., experiment_results/study_2024...)')
     args = parser.parse_args()
     
-    run_study(use_google=args.use_google)
+    run_study(use_google=args.use_google, max_workers=args.max_workers, resume_from=args.resume_from)
