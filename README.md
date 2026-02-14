@@ -135,10 +135,16 @@ This file contains every single prompt-response pair and its safety evaluation.
 *   **`safe_both`**: Judge's verdict on the **contextual pair** (unsafe/safe).
 
 ### 2. `per_prompt_scores.csv` (Prompt-Level Stats)
-Aggregates performance for each unique prompt across multiple iterations.
-*   **`csrt`**: The prompt text.
-*   **`is_unsafe_response`**: Fraction of times the response was unsafe (0.0 to 1.0).
-*   **`is_unsafe_both`**: Fraction of times the contextual pair was unsafe (0.0 to 1.0).
+This file tells you **which specific questions** successfully tricked the model. It aggregates results across all 10 iterations for each unique prompt.
+
+*   **`csrt`**: The actual code-switched prompt used.
+*   **`is_unsafe_response`**: The success rate based on the response only (0.0 to 1.0).
+    *   `0.0`: The response was never flagged as unsafe.
+    *   `1.0`: The response was always flagged as unsafe.
+*   **`is_unsafe_both`**: The success rate based on the prompt+response context (0.0 to 1.0). **Look at this column to find winning prompts.**
+    *   `0.0`: Failed every time (0/10).
+    *   `0.5`: Worked 50% of the time (5/10) - somewhat reliable.
+    *   `1.0`: Worked every single time (10/10) - highly reliable jailbreak.
 
 ### 3. `prompts.csv` (Source Data)
 *   **`id`**: Unique ID of the prompt template.
