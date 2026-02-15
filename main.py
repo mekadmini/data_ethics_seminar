@@ -152,10 +152,23 @@ def run_experiment(args=None, input_dir="experiment_results"):
     FINAL_FILE = f"{input_dir}/results_evaluated.csv"
 
     PROMPT_COL = "csrt"
+    
+    # Defaults
     TARGET_MODEL = "llama3"
     JUDGE_MODEL = "llama-guard3"
+    
+    # Overrides from args/config
+    if args:
+        if isinstance(args, dict):
+            TARGET_MODEL = args.get('target_model', TARGET_MODEL)
+            JUDGE_MODEL = args.get('judge_model', JUDGE_MODEL)
+        elif hasattr(args, 'target_model') and args.target_model:
+            TARGET_MODEL = args.target_model
+            if hasattr(args, 'judge_model') and args.judge_model:
+                JUDGE_MODEL = args.judge_model
 
     print(f"Running experiment in: {input_dir}")
+    print(f"Target: {TARGET_MODEL}, Judge: {JUDGE_MODEL}")
 
     # 1. Run Generation (Saves progressively)
     generate_and_save_stream(
@@ -196,6 +209,8 @@ def main():
     parser_calc.add_argument('--input_dir', type=str, default='experiment_results', help='Directory containing prompts.csv')
     parser_calc.add_argument('--iterations', type=int, default=1, help='Number of iterations per prompt')
     parser_calc.add_argument('--max_workers', type=int, default=4, help='Number of parallel threads')
+    parser_calc.add_argument('--target_model', type=str, default='llama3', help='Target Ollama model')
+    parser_calc.add_argument('--judge_model', type=str, default='llama-guard3', help='Safety judge Ollama model')
     parser_calc.set_defaults(func=run_experiment)
 
 

@@ -27,7 +27,7 @@ def find_best_configuration(summary_df):
     print(f"   Consistent Success: {best['consistent_success']:.2f}%")
 
 
-def run_study(use_google=False, max_workers=4, resume_from=None):
+def run_study(use_google=False, max_workers=4, resume_from=None, target_model="llama3", judge_model="llama-guard3"):
     # Base configuration ensuring we use a small split for testing
     base_config = {
         "matrix_language": MatrixLanguage.ITALIAN,
@@ -38,7 +38,9 @@ def run_study(use_google=False, max_workers=4, resume_from=None):
         "iterations": 10, # Attack iterations (N responses per prompt)
         "translation_iterations": 10, # Translation iterations (N variations per source prompt)
         "use_google_api": use_google,
-        "max_workers": max_workers
+        "max_workers": max_workers,
+        "target_model": target_model,
+        "judge_model": judge_model
     }
 
     # --- Define Parameter Grid ---
@@ -112,9 +114,15 @@ def run_study(use_google=False, max_workers=4, resume_from=None):
         # Ensure 'input_dir' is set for run_experiment
         config['input_dir'] = run_dir
 
-        # 1. Generate Prompts
+        # 1. Generate Prompts OR Reuse Existing
         # Note: generate_prompts inside main.py creates the folder if it doesn't exist
-        output_path = generate_prompts(config=config)
+        prompts_path = os.path.join(run_dir, "prompts.csv")
+        
+        if os.path.exists(prompts_path):
+             print(f"🔄 Found existing prompts.csv in {run_dir}. Reusing to ensure consistency.")
+             output_path = run_dir
+        else:
+             output_path = generate_prompts(config=config)
         
         # 2. Run Experiment (Generation + Eval)
         # We pass 'config' as the args argument so run_experiment sees 'iterations'
@@ -139,13 +147,20 @@ def run_study(use_google=False, max_workers=4, resume_from=None):
 
     print(f"\nFull Study Completed. Results in {study_root}")
 
-
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--use_google', action='store_true', help='Use Google Translate API')
     parser.add_argument('--max_workers', type=int, default=4, help='Number of parallel threads for LLM generation')
     parser.add_argument('--resume_from', type=str, default=None, help='Directory to resume the study from (e.g., experiment_results/study_2024...)')
+    parser.add_argument('--target_model', type=str, default='llama3', help='Ollama model to attack (default: llama3)')
+    parser.add_argument('--judge_model', type=str, default='llama-guard3', help='Ollama model for safety evaluation (default: llama-guard3)')
     args = parser.parse_args()
     
-    run_study(use_google=args.use_google, max_workers=args.max_workers, resume_from=args.resume_from)
+    run_study(
+        use_google=args.use_google, 
+        max_workers=args.max_workers, 
+        resume_from=args.resume_from,
+        target_model=args.target_model,
+        judge_model=args.judge_model
+    )
