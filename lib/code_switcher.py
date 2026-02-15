@@ -13,6 +13,7 @@ from lib.tagger import POSMasker
 
 from functools import lru_cache
 
+
 # ... imports ...
 
 # Argos Translate runs locally. Google runs online.
@@ -27,6 +28,7 @@ def get_argos_translator(from_code: str, to_code: str):
     except Exception:
         return None
 
+
 def clean_translation(original: str, translated: str) -> str:
     """
     Sanitizes translation output.
@@ -35,12 +37,13 @@ def clean_translation(original: str, translated: str) -> str:
     """
     if not translated or not translated.strip():
         return original
-    
+
     # Specific artifact observed in Argos Translate (IT -> EN) for "mia"
     if "♪" in translated:
         return original
-        
+
     return translated
+
 
 def translate_text_argos(text: str, from_code: str, to_code: str) -> str:
     """
@@ -48,17 +51,17 @@ def translate_text_argos(text: str, from_code: str, to_code: str) -> str:
     Tries direct translation first, then pivots through English.
     """
     result = text
-    
+
     # 1. Direct Translation
     translator = get_argos_translator(from_code, to_code)
     if translator:
         result = translator.translate(text)
-    
+
     # 2. Pivot through English (if direct failed or not available)
     # Note: If direct translator existed, we used it. 
     # But if text == result (meaning no change? prompt generator expects change usually)
     # logic here was: if translator exists, use it.
-    
+
     elif from_code != 'en' and to_code != 'en':
         t1 = get_argos_translator(from_code, 'en')
         t2 = get_argos_translator('en', to_code)
@@ -66,10 +69,11 @@ def translate_text_argos(text: str, from_code: str, to_code: str) -> str:
             step1 = t1.translate(text)
             # Check for artifact in intermediate step
             if "♪" in step1:
-                return text # Fast fail back to original
+                return text  # Fast fail back to original
             result = t2.translate(step1)
 
     return clean_translation(text, result)
+
 
 def translate_text_google(text: str, to_code: str) -> str:
     """
@@ -82,6 +86,7 @@ def translate_text_google(text: str, to_code: str) -> str:
     except Exception as e:
         print(f"⚠️ Google API Error: {e}")
         return text
+
 
 def code_switch(input_sentences: List[str],
                 matrix_language: MatrixLanguage,
@@ -116,7 +121,7 @@ def code_switch(input_sentences: List[str],
 
     # 3. Stochastic Selection
     batch_data = masker.get_docs_and_masks(input_sentences, allowed_tags)
-    
+
     # Map: word -> set of target_languages needed
     unique_words_to_translate: Dict[str, Set[str]] = {}
     decisions = []
@@ -142,7 +147,7 @@ def code_switch(input_sentences: List[str],
     # 4. Batch Translation (Sequential Loop)
     translation_db = {}
     source_code = matrix_language.value if hasattr(matrix_language, 'value') else str(matrix_language)
-    
+
     engine_name = "Google API" if use_google_api else "Argos Local"
     print(f"🚀 Translating {len(unique_words_to_translate)} unique words from {source_code} using {engine_name}...")
 
@@ -150,13 +155,13 @@ def code_switch(input_sentences: List[str],
         translation_db[word] = {}
         for target_lang in target_langs:
             target_code = target_lang.value if hasattr(target_lang, 'value') else str(target_lang)
-            
+
             # Perform Translation
             if use_google_api:
                 translated_word = translate_text_google(word, target_code)
             else:
                 translated_word = translate_text_argos(word, source_code, target_code)
-                
+
             translation_db[word][target_lang] = translated_word
 
     # 5. Reconstruction
@@ -175,4 +180,3 @@ def code_switch(input_sentences: List[str],
         final_sentences.append("".join(output_tokens))
 
     return final_sentences
-
