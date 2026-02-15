@@ -3,6 +3,7 @@ import time
 import itertools
 from datetime import datetime
 import pandas as pd
+import json
 from lib.custom_types import MatrixLanguage, EmbeddedLanguage
 from main import generate_prompts, run_experiment
 from experiment import aggregate_results
@@ -27,7 +28,7 @@ def find_best_configuration(summary_df):
     print(f"   Consistent Success: {best['consistent_success']:.2f}%")
 
 
-def run_study(use_google=False, max_workers=4, resume_from=None, target_model="llama3", judge_model="llama-guard3"):
+def run_study(use_google=False, max_workers=4, resume_from=None, target_model="llama3", judge_model="llama-guard3", prompts_only=False):
     # Base configuration ensuring we use a small split for testing
     base_config = {
         "matrix_language": MatrixLanguage.ITALIAN,
@@ -117,13 +118,38 @@ def run_study(use_google=False, max_workers=4, resume_from=None, target_model="l
         # 1. Generate Prompts OR Reuse Existing
         # Note: generate_prompts inside main.py creates the folder if it doesn't exist
         prompts_path = os.path.join(run_dir, "prompts.csv")
+        config_path = os.path.join(run_dir, "config.json")
         
+        if os.path.exists(config_path):
+             print(f"🔄 Found existing config.json in {run_dir}. Loading...")
+             try:
+                 with open(config_path, 'r') as f:
+                     loaded_config = json.load(f)
+                 
+                 # Logic Fix:
+                 # 1. Start with 'config' (base + scenario)
+                 # 2. Update with 'loaded_config' (so file settings like 'iterations' override defaults)
+                 config.update(loaded_config)
+                 
+                 # 3. Enforce CLI overrides specifically
+                 config['target_model'] = target_model
+                 config['judge_model'] = judge_model
+                 config['max_workers'] = max_workers
+                 config['use_google_api'] = use_google
+                 
+             except Exception as e:
+                 print(f"⚠️ Failed to load config.json: {e}. Using generated config.")
+
         if os.path.exists(prompts_path):
              print(f"🔄 Found existing prompts.csv in {run_dir}. Reusing to ensure consistency.")
              output_path = run_dir
         else:
              output_path = generate_prompts(config=config)
         
+        if prompts_only:
+            print(f"⏭️ Prompts generated/verified for {scenario['name']}. Skipping experiment (Prompts Only mode).")
+            continue
+
         # 2. Run Experiment (Generation + Eval)
         # We pass 'config' as the args argument so run_experiment sees 'iterations'
         df_eval = run_experiment(args=config, input_dir=output_path)
@@ -134,6 +160,10 @@ def run_study(use_google=False, max_workers=4, resume_from=None, target_model="l
         summary_results.append(stats)
         
         print(f"Scenario {scenario['name']} completed.")
+
+    if not summary_results:
+        print("\n--- No experiments run (Prompts Only or no results). Exiting. ---")
+        return
 
     print(f"\n--- Study Completed. Summary of ASR ---")
     summary_df = pd.DataFrame(summary_results)
@@ -155,6 +185,7 @@ if __name__ == "__main__":
     parser.add_argument('--resume_from', type=str, default=None, help='Directory to resume the study from (e.g., experiment_results/study_2024...)')
     parser.add_argument('--target_model', type=str, default='llama3', help='Ollama model to attack (default: llama3)')
     parser.add_argument('--judge_model', type=str, default='llama-guard3', help='Ollama model for safety evaluation (default: llama-guard3)')
+    parser.add_argument('--prompts_only', action='store_true', help='Only generate prompts and config, do not run the experiment')
     args = parser.parse_args()
     
     run_study(
@@ -162,5 +193,6 @@ if __name__ == "__main__":
         max_workers=args.max_workers, 
         resume_from=args.resume_from,
         target_model=args.target_model,
-        judge_model=args.judge_model
+        judge_model=args.judge_model,
+        prompts_only=args.prompts_only
     )

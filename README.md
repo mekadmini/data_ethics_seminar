@@ -72,10 +72,17 @@ The main entry point is `study_runner.py`. This runs the full grid search using 
 python study_runner.py
 
 # Resume an interrupted study
+# This automatically loads the configuration (e.g., iterations) from the saved config.json
 python study_runner.py --resume_from experiment_results/study_20240214_123456
 
-# Run with 8 threads for faster generation
-python study_runner.py --max_workers 8
+# Resume but OVERRIDE specific parameters (e.g., use a different model or more workers)
+python study_runner.py --resume_from experiment_results/study_20240214_123456 --target_model gemma2 --max_workers 8
+```
+
+### Generate Prompts Only
+To generate all locally cached prompts and configuration files without running the experiment (useful for preparing data on one machine to run on another):
+```bash
+python study_runner.py --prompts_only
 ```
 
 ### Run with Google Translate (Online)
