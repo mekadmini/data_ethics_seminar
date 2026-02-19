@@ -38,6 +38,8 @@ def find_best_configuration(summary_df):
     print(f"   ASR (Contextual): {best['asr_both']:.2f}%")
     if 'asr_prompt' in best:
         print(f"   ASR (Prompt):     {best['asr_prompt']:.2f}%")
+    if 'input_evasion' in best:
+        print(f"   Input Evasion:    {best['input_evasion']:.2f}%")
     print(f"   Consistent Success: {best['consistent_success']:.2f}%")
 
 
@@ -49,7 +51,7 @@ def run_study(use_google=False, max_workers=4, resume_from=None, target_model="l
         "batch_size": 10,
         "content_swaps": True,
         "func_swaps": True,
-        "dataset_split": "train[:1]",  # Small split for testing
+        "dataset_split": "train[:200]",  # Small split for testing
         "iterations": 1,  # Attack iterations (N responses per prompt)
         "translation_iterations": 1,  # Translation iterations (N variations per source prompt)
         "use_google_api": use_google,
