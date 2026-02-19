@@ -30,6 +30,8 @@ class DatasetSwapper:
                           swap_ratio: float,
                           language_weights: Optional[Dict[EmbeddedLanguage, float]] = None,
                           batch_size: int = 32,
+                          content_swaps: bool = True,  # Default to True for backward compatibility
+                          func_swaps: bool = True,  # Default to True for backward compatibility
                           use_google_api: bool = False) -> List[str]:
         """
         Applies code switching to a dataframe column in batches.
@@ -50,8 +52,10 @@ class DatasetSwapper:
                 matrix_language=self.matrix_lang,
                 embedded_languages=embedded_langs,
                 swap_ratio=swap_ratio,
-                language_weights=language_weights,  # <--- Passing weights
+                language_weights=language_weights,
                 masker=self.masker,
+                content_attr_swaps=content_swaps,  # <--- Passing logic
+                func_attr_swaps=func_swaps,  # <--- Passing logic
                 use_google_api=use_google_api
             )
 
@@ -141,13 +145,15 @@ if __name__ == "__main__":
         embedded_langs=config["embedded_languages"],
         swap_ratio=config["swap_ratio"],
         language_weights=config["language_weights"],  # Passing the weights
-        batch_size=config["batch_size"]
+        batch_size=config["batch_size"],
+        content_swaps=config.get("content_swaps", True),
+        func_swaps=config.get("func_swaps", True)
     )
 
     csrt['csrt'] = switched_texts
 
     # --- 5. Save Results & Parameters ---
-    save_experiment(csrt, config, output_dir="experiment_results")
+    save_experiment(csrt, config, output_dir="experiment_results.old")
 
     # Verify
     print("\nSample Output:")

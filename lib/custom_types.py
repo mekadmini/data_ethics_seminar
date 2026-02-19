@@ -15,6 +15,7 @@ class EmbeddedLanguage:
     GREEK = "el"
     ITALIAN = "it"
     SPANISH = "es"
+    JAPANESE = "ja"
 
 
 class PossibleSwaps:

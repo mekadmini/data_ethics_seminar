@@ -1,6 +1,8 @@
+import argparse
+
 import pandas as pd
 from datasets import load_dataset
-import argparse
+
 from experiment import generate_and_save_stream, evaluate_saved_results
 from lib.custom_types import MatrixLanguage, EmbeddedLanguage
 from prompt_generator import save_experiment, DatasetSwapper
@@ -17,7 +19,7 @@ def generate_prompts(args=None, config=None):
             "embedded_languages": [
                 EmbeddedLanguage.ARABIC,
                 EmbeddedLanguage.GREEK,
-                EmbeddedLanguage.SPANISH
+                EmbeddedLanguage.JAPANESE
             ],
 
             # 40% of all valid words will be translated
@@ -101,6 +103,8 @@ def generate_prompts(args=None, config=None):
             swap_ratio=config["swap_ratio"],
             language_weights=config["language_weights"],
             batch_size=config["batch_size"],
+            content_swaps=config.get("content_swaps", True),
+            func_swaps=config.get("func_swaps", True),
             use_google_api=use_google  # <--- Pass flag
         )
 

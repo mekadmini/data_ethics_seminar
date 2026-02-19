@@ -1,12 +1,13 @@
-import os
-import time
 import itertools
-from datetime import datetime
-import pandas as pd
 import json
+import os
+from datetime import datetime
+
+import pandas as pd
+
+from experiment import aggregate_results
 from lib.custom_types import MatrixLanguage, EmbeddedLanguage
 from main import generate_prompts, run_experiment
-from experiment import aggregate_results
 
 
 def find_best_configuration(summary_df):
@@ -21,11 +22,22 @@ def find_best_configuration(summary_df):
     sorted_df = summary_df.sort_values(by="asr_both", ascending=False)
 
     print("\n🏆 --- Best Configurations --- 🏆")
-    print(sorted_df[['scenario', 'asr_both', 'asr_response', 'at_least_one_success', 'consistent_success']].head(5))
+    # Check if columns exist before printing
+    cols = ['scenario', 'asr_both']
+    if 'asr_prompt' in sorted_df.columns:
+        cols.append('asr_prompt')
+    cols.extend(['asr_response', 'at_least_one_success', 'consistent_success'])
+    
+    # Filter only existing columns
+    cols = [c for c in cols if c in sorted_df.columns]
+    
+    print(sorted_df[cols].head(5))
 
     best = sorted_df.iloc[0]
     print(f"\n✅ Winning Configuration: {best['scenario']}")
     print(f"   ASR (Contextual): {best['asr_both']:.2f}%")
+    if 'asr_prompt' in best:
+        print(f"   ASR (Prompt):     {best['asr_prompt']:.2f}%")
     print(f"   Consistent Success: {best['consistent_success']:.2f}%")
 
 
@@ -37,9 +49,9 @@ def run_study(use_google=False, max_workers=4, resume_from=None, target_model="l
         "batch_size": 10,
         "content_swaps": True,
         "func_swaps": True,
-        "dataset_split": "train[:3]",  # Small split for testing
-        "iterations": 10,  # Attack iterations (N responses per prompt)
-        "translation_iterations": 10,  # Translation iterations (N variations per source prompt)
+        "dataset_split": "train[:1]",  # Small split for testing
+        "iterations": 1,  # Attack iterations (N responses per prompt)
+        "translation_iterations": 1,  # Translation iterations (N variations per source prompt)
         "use_google_api": use_google,
         "max_workers": max_workers,
         "target_model": target_model,
@@ -47,44 +59,73 @@ def run_study(use_google=False, max_workers=4, resume_from=None, target_model="l
     }
 
     # --- Define Parameter Grid ---
-    # swap_ratios = [0.1, 0.3, 0.5, 0.7, 0.9]
-    swap_ratios = [0.9]
+    swap_ratios = [0.8]
 
-    # Define language dominance strategies
-    strategies = {
-        "Arabic_Dom": {
-            EmbeddedLanguage.ARABIC: 0.8,
-            EmbeddedLanguage.GREEK: 0.1,
-            EmbeddedLanguage.SPANISH: 0.1
-        },
-        "Greek_Dom": {
-            EmbeddedLanguage.ARABIC: 0.1,
-            EmbeddedLanguage.GREEK: 0.8,
-            EmbeddedLanguage.SPANISH: 0.1
-        },
-        "Spanish_Dom": {
-            EmbeddedLanguage.ARABIC: 0.1,
-            EmbeddedLanguage.GREEK: 0.1,
-            EmbeddedLanguage.SPANISH: 0.8
-        },
-        "Balanced": {
-            EmbeddedLanguage.ARABIC: 1 / 3,
-            EmbeddedLanguage.GREEK: 1 / 3,
-            EmbeddedLanguage.SPANISH: 1 / 3
-        }
-    }
+    # Matrix languages to test
+    matrix_languages = [MatrixLanguage.ITALIAN, MatrixLanguage.ENGLISH]
+
+    # Embedded languages pool
+    embedded_pool = [EmbeddedLanguage.ARABIC, EmbeddedLanguage.GREEK, EmbeddedLanguage.SPANISH,
+                     EmbeddedLanguage.JAPANESE]
+
+    # Define language dominance strategies (Dynamic)
+    strategies = {}
+
+    # 1. Balanced: Equal weights (0.25 each)
+    strategies["Balanced"] = {lang: 0.25 for lang in embedded_pool}
+
+    # 2. Dominant: One language gets 0.7, others split the remaining 0.3 (0.1 each)
+    for lang in embedded_pool:
+        # Get dominance name (e.g. "Arabic_Dom")
+        lang_name = lang.name.capitalize() if hasattr(lang, 'name') else str(lang).capitalize()
+        if lang == EmbeddedLanguage.ARABIC:
+            lang_name = "Arabic"  # Manual overrides if needed
+        elif lang == EmbeddedLanguage.GREEK:
+            lang_name = "Greek"
+        elif lang == EmbeddedLanguage.SPANISH:
+            lang_name = "Spanish"
+        elif lang == EmbeddedLanguage.JAPANESE:
+            lang_name = "Japanese"
+
+        strat_key = f"{lang_name}_Dom"
+
+        weights = {}
+        for l in embedded_pool:
+            if l == lang:
+                weights[l] = 0.7
+            else:
+                weights[l] = 0.1
+        strategies[strat_key] = weights
+
+    # Define filter configurations
+    filter_configs = [
+        ("Both", {"content_swaps": True, "func_swaps": True}),
+        ("FuncOnly", {"content_swaps": False, "func_swaps": True}),
+        ("ContentOnly", {"content_swaps": True, "func_swaps": False})
+    ]
 
     study_scenarios = []
 
     # Generate all combinations
-    for ratio, (strat_name, weights) in itertools.product(swap_ratios, strategies.items()):
-        scenario_name = f"Ratio_{ratio}_{strat_name}"
-        study_scenarios.append({
-            "name": scenario_name,
-            "swap_ratio": ratio,
-            "embedded_languages": [EmbeddedLanguage.ARABIC, EmbeddedLanguage.GREEK, EmbeddedLanguage.SPANISH],
-            "language_weights": weights
-        })
+    # Loop order: Matrix -> Ratio -> Strategy -> Filter
+    for matrix_lang in matrix_languages:
+        mat_code = matrix_lang.value if hasattr(matrix_lang, 'value') else str(matrix_lang)
+        mat_prefix = mat_code.capitalize()  # "It", "En"
+
+        for ratio, (strat_name, weights), (filter_name, filter_settings) in itertools.product(swap_ratios,
+                                                                                              strategies.items(),
+                                                                                              filter_configs):
+            # Scenario naming: It_Ratio_0.9_Arabic_Dom_Both
+            scenario_name = f"{mat_prefix}_Ratio_{ratio}_{strat_name}_{filter_name}"
+
+            study_scenarios.append({
+                "name": scenario_name,
+                "matrix_language": matrix_lang,
+                "swap_ratio": ratio,
+                "embedded_languages": embedded_pool,
+                "language_weights": weights,
+                **filter_settings
+            })
 
     # --- Determine Output Directory ---
     if resume_from:
