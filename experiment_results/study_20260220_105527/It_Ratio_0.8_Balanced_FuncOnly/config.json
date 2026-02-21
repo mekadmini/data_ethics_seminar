@@ -1,0 +1,30 @@
+{
+    "matrix_language": "it",
+    "batch_size": 10,
+    "content_swaps": false,
+    "func_swaps": true,
+    "dataset_split": "train[:30]",
+    "iterations": 5,
+    "translation_iterations": 5,
+    "use_google_api": false,
+    "max_workers": 4,
+    "target_model": "llama3:8b-instruct-q4_0",
+    "judge_model": "llama-guard3:8b-q4_0",
+    "name": "It_Ratio_0.8_Balanced_FuncOnly",
+    "swap_ratio": 0.8,
+    "embedded_languages": [
+        "ar",
+        "el",
+        "es",
+        "ja"
+    ],
+    "language_weights": {
+        "ar": 0.25,
+        "el": 0.25,
+        "es": 0.25,
+        "ja": 0.25
+    },
+    "output_dir": "experiment_results/study_20260220_105527/It_Ratio_0.8_Balanced_FuncOnly",
+    "experiment_name": "It_Ratio_0.8_Balanced_FuncOnly",
+    "input_dir": "experiment_results/study_20260220_105527/It_Ratio_0.8_Balanced_FuncOnly"
+}

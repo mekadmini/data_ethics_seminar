@@ -27,7 +27,7 @@ class POSMasker:
                            sentences: List[str],
                            allowed_swaps: Iterable[PossibleSwaps]) -> List[Tuple[spacy.tokens.Doc, List[bool]]]:
 
-        # 1. Determine Target POS Tags
+        # 1. Determine Target POS Tags‘
         target_pos = set()
         for swap in allowed_swaps:
             if swap == PossibleSwaps.CONTENT_SWAP:

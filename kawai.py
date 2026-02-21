@@ -51,9 +51,9 @@ def run_study(use_google=False, max_workers=4, resume_from=None, target_model="l
         "batch_size": 10,
         "content_swaps": True,
         "func_swaps": True,
-        "dataset_split": "train[:200]",  # Small split for testing
-        "iterations": 10,  # Attack iterations (N responses per prompt)
-        "translation_iterations": 10,  # Translation iterations (N variations per source prompt)
+        "dataset_split": "train[:30]",  # Small split for testing
+        "iterations": 5,  # Attack iterations (N responses per prompt)
+        "translation_iterations": 5,  # Translation iterations (N variations per source prompt)
         "use_google_api": use_google,
         "max_workers": max_workers,
         "target_model": target_model,
@@ -231,9 +231,9 @@ if __name__ == "__main__":
     parser.add_argument('--max_workers', type=int, default=4, help='Number of parallel threads for LLM generation')
     parser.add_argument('--resume_from', type=str, default=None,
                         help='Directory to resume the study from (e.g., experiment_results/study_2024...)')
-    parser.add_argument('--target_model', type=str, default='llama3', help='Ollama model to attack (default: llama3)')
-    parser.add_argument('--judge_model', type=str, default='llama-guard3',
-                        help='Ollama model for safety evaluation (default: llama-guard3)')
+    parser.add_argument('--target_model', type=str, default='llama3:8b-instruct-q4_0', help='Ollama model to attack (default: llama3:8b-instruct-q4_0)')
+    parser.add_argument('--judge_model', type=str, default='llama-guard3:8b-q4_0',
+                        help='Ollama model for safety evaluation (default: llama-guard3:8b-q4_0)')
     parser.add_argument('--prompts_only', action='store_true',
                         help='Only generate prompts and config, do not run the experiment')
     args = parser.parse_args()
