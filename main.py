@@ -189,7 +189,8 @@ def run_experiment(args=None, input_dir="experiment_results"):
         output_csv=FINAL_FILE,
         prompt_col=PROMPT_COL,
         target_model=TARGET_MODEL,
-        judge_model=JUDGE_MODEL
+        judge_model=JUDGE_MODEL,
+        max_workers=max_workers
     )
 
     return df_eval

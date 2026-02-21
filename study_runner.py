@@ -51,9 +51,9 @@ def run_study(use_google=False, max_workers=4, resume_from=None, target_model="l
         "batch_size": 10,
         "content_swaps": True,
         "func_swaps": True,
-        "dataset_split": "train[:200]",  # Small split for testing
-        "iterations": 10,  # Attack iterations (N responses per prompt)
-        "translation_iterations": 10,  # Translation iterations (N variations per source prompt)
+        "dataset_split": "train[:30]",  # Small split for testing
+        "iterations": 5,  # Attack iterations (N responses per prompt)
+        "translation_iterations": 5,  # Translation iterations (N variations per source prompt)
         "use_google_api": use_google,
         "max_workers": max_workers,
         "target_model": target_model,
