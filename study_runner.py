@@ -5,42 +5,8 @@ from datetime import datetime
 
 import pandas as pd
 
-from experiment import aggregate_results
 from lib.custom_types import MatrixLanguage, EmbeddedLanguage
 from main import generate_prompts, run_experiment
-
-
-def find_best_configuration(summary_df):
-    """
-    Analyzes the summary dataframe to find the configuration with the highest ASR.
-    """
-    if summary_df.empty:
-        print("No results to analyze.")
-        return
-
-    # Sort by ASR (Contextual) descending
-    sorted_df = summary_df.sort_values(by="asr_both", ascending=False)
-
-    print("\n🏆 --- Best Configurations --- 🏆")
-    # Check if columns exist before printing
-    cols = ['scenario', 'asr_both']
-    if 'asr_prompt' in sorted_df.columns:
-        cols.append('asr_prompt')
-    cols.extend(['asr_response', 'at_least_one_success', 'consistent_success'])
-    
-    # Filter only existing columns
-    cols = [c for c in cols if c in sorted_df.columns]
-    
-    print(sorted_df[cols].head(5))
-
-    best = sorted_df.iloc[0]
-    print(f"\n✅ Winning Configuration: {best['scenario']}")
-    print(f"   ASR (Contextual): {best['asr_both']:.2f}%")
-    if 'asr_prompt' in best:
-        print(f"   ASR (Prompt):     {best['asr_prompt']:.2f}%")
-    if 'input_evasion' in best:
-        print(f"   Input Evasion:    {best['input_evasion']:.2f}%")
-    print(f"   Consistent Success: {best['consistent_success']:.2f}%")
 
 
 def run_study(use_google=False, max_workers=4, resume_from=None, target_model="llama3", judge_model="llama-guard3",
@@ -144,8 +110,6 @@ def run_study(use_google=False, max_workers=4, resume_from=None, target_model="l
 
     print(f"Total Scenarios to run: {len(study_scenarios)}")
 
-    summary_results = []
-
     for i, scenario in enumerate(study_scenarios):
         print(f"\n--- Running Scenario {i + 1}/{len(study_scenarios)}: {scenario['name']} ---")
 
@@ -198,31 +162,20 @@ def run_study(use_google=False, max_workers=4, resume_from=None, target_model="l
             continue
 
         # 2. Run Experiment (Generation + Eval)
-        # We pass 'config' as the args argument so run_experiment sees 'iterations'
-        df_eval = run_experiment(args=config, input_dir=output_path)
-
-        # 3. Aggregate Results
-        stats = aggregate_results(df_eval, prompt_col="csrt", output_dir=run_dir)
-        stats['scenario'] = scenario['name']
-        summary_results.append(stats)
+        run_experiment(
+            input_dir=output_path,
+            iterations=config.get('iterations', 1),
+            n_repeat=config.get('n_repeat', 1),
+            max_workers=config.get('max_workers', 4),
+            target_model=config.get('target_model', 'llama3'),
+            judge_model=config.get('judge_model', 'llama-guard3')
+        )
 
         print(f"Scenario {scenario['name']} completed.")
 
-    if not summary_results:
-        print("\n--- No experiments run (Prompts Only or no results). Exiting. ---")
-        return
-
-    print(f"\n--- Study Completed. Summary of ASR ---")
-    summary_df = pd.DataFrame(summary_results)
-
-    # Find and print best config
-    find_best_configuration(summary_df)
-
-    summary_path = os.path.join(study_root, "final_summary.csv")
-    summary_df.to_csv(summary_path, index=False)
-    print(f"Global Summary saved to {summary_path}")
-
-    print(f"\nFull Study Completed. Results in {study_root}")
+    print(f"\n✅ Full Study Completed! Raw results are inside: {study_root}")
+    print("👉 To consolidate results into one dataset, run: python consolidate_results.py")
+    print("👉 To compute mathematical analysis metrics, run: python compute_metrics.py\n")
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ from lib.custom_types import MatrixLanguage, EmbeddedLanguage
 from prompt_generator import save_experiment, DatasetSwapper
 
 
-def generate_prompts(args=None, config=None):
+def generate_prompts(config=None, use_google_api=None, dataset_split=None, translation_iterations=None, batch_size=None, output_dir=None):
     # --- 1. Configuration ---
     if config is None:
         # Default config if none provided (e.g. running from CLI without granular args)
@@ -41,16 +41,17 @@ def generate_prompts(args=None, config=None):
             "use_google_api": False
         }
 
-    # Override config with args if present
-    if args:
-        if hasattr(args, 'use_google') and args.use_google:
-            config['use_google_api'] = True
-        if hasattr(args, 'dataset_split') and args.dataset_split:
-            config['dataset_split'] = args.dataset_split
-        if hasattr(args, 'translation_iterations') and args.translation_iterations:
-            config['translation_iterations'] = args.translation_iterations
-        if hasattr(args, 'batch_size') and args.batch_size:
-            config['batch_size'] = args.batch_size
+    # Override config with explicit kwargs if present
+    if use_google_api is not None:
+        config['use_google_api'] = use_google_api
+    if dataset_split is not None:
+        config['dataset_split'] = dataset_split
+    if translation_iterations is not None:
+        config['translation_iterations'] = translation_iterations
+    if batch_size is not None:
+        config['batch_size'] = batch_size
+    if output_dir is not None:
+        config['output_dir'] = output_dir
 
     # Determine unique output directory
     # If config allows specifying an output root, use it. Otherwise default.
@@ -129,61 +130,29 @@ def generate_prompts(args=None, config=None):
     return output_dir
 
 
-def run_experiment(args=None, input_dir="experiment_results"):
-    # Allow overriding via args if called from CLI
-    if args and hasattr(args, 'input_dir') and args.input_dir:
-        input_dir = args.input_dir
-
-    # Allow iterations from args
-    iterations = 1
-    if args and hasattr(args, 'iterations') and args.iterations:
-        iterations = args.iterations
-    elif isinstance(args, dict) and 'iterations' in args:
-        iterations = args['iterations']
-
-    # Allow n_repeat from args
-    n_repeat = 1
-    if args and hasattr(args, 'n_repeat') and args.n_repeat:
-        n_repeat = args.n_repeat
-    elif isinstance(args, dict) and 'n_repeat' in args:
-        n_repeat = args['n_repeat']
-
-    # Allow max_workers from args
-    max_workers = 4
-    if args and hasattr(args, 'max_workers') and args.max_workers:
-        max_workers = args.max_workers
-    elif isinstance(args, dict) and 'max_workers' in args:
-        max_workers = args['max_workers']
-
+def run_experiment(
+    input_dir="experiment_results",
+    iterations=1,
+    n_repeat=1,
+    max_workers=4,
+    target_model="llama3",
+    judge_model="llama-guard3"
+):
     INPUT_FILE = f"{input_dir}/prompts.csv"
     INTERMEDIATE_FILE = f"{input_dir}/results_raw.csv"
     FINAL_FILE = f"{input_dir}/results_evaluated.csv"
 
     PROMPT_COL = "csrt"
 
-    # Defaults
-    TARGET_MODEL = "llama3"
-    JUDGE_MODEL = "llama-guard3"
-
-    # Overrides from args/config
-    if args:
-        if isinstance(args, dict):
-            TARGET_MODEL = args.get('target_model', TARGET_MODEL)
-            JUDGE_MODEL = args.get('judge_model', JUDGE_MODEL)
-        elif hasattr(args, 'target_model') and args.target_model:
-            TARGET_MODEL = args.target_model
-            if hasattr(args, 'judge_model') and args.judge_model:
-                JUDGE_MODEL = args.judge_model
-
     print(f"Running experiment in: {input_dir}")
-    print(f"Target: {TARGET_MODEL}, Judge: {JUDGE_MODEL}")
+    print(f"Target: {target_model}, Judge: {judge_model}")
 
     # 1. Run Generation (Saves progressively)
     generate_and_save_stream(
         input_csv=INPUT_FILE,
         output_csv=INTERMEDIATE_FILE,
         prompt_col=PROMPT_COL,
-        model_name=TARGET_MODEL,
+        model_name=target_model,
         iterations=iterations,
         max_workers=max_workers,
         n_repeat=n_repeat
@@ -194,13 +163,31 @@ def run_experiment(args=None, input_dir="experiment_results"):
         input_csv=INTERMEDIATE_FILE,
         output_csv=FINAL_FILE,
         prompt_col=PROMPT_COL,
-        target_model=TARGET_MODEL,
-        judge_model=JUDGE_MODEL,
+        target_model=target_model,
+        judge_model=judge_model,
         max_workers=max_workers
     )
 
     return df_eval
 
+
+def handle_generate(args):
+    generate_prompts(
+        use_google_api=args.use_google,
+        dataset_split=args.dataset_split,
+        translation_iterations=args.translation_iterations,
+        batch_size=args.batch_size
+    )
+
+def handle_experiment(args):
+    run_experiment(
+        input_dir=args.input_dir,
+        iterations=args.iterations,
+        n_repeat=args.n_repeat,
+        max_workers=args.max_workers,
+        target_model=args.target_model,
+        judge_model=args.judge_model
+    )
 
 def main():
     parser = argparse.ArgumentParser(description="LeakyGPT clt")
@@ -213,7 +200,7 @@ def main():
     parser_greet.add_argument('--dataset_split', type=str, help='Dataset split (e.g. train[:10])')
     parser_greet.add_argument('--translation_iterations', type=int, help='Number of translation variations per prompt')
     parser_greet.add_argument('--batch_size', type=int, help='Batch size for processing')
-    parser_greet.set_defaults(func=generate_prompts)
+    parser_greet.set_defaults(func=handle_generate)
 
     # --- Command 2: experiment ---
     parser_calc = subparsers.add_parser('experiment', help='Feed the code-switched prompts to the llm')
@@ -224,7 +211,7 @@ def main():
     parser_calc.add_argument('--max_workers', type=int, default=4, help='Number of parallel threads')
     parser_calc.add_argument('--target_model', type=str, default='llama3', help='Target Ollama model')
     parser_calc.add_argument('--judge_model', type=str, default='llama-guard3', help='Safety judge Ollama model')
-    parser_calc.set_defaults(func=run_experiment)
+    parser_calc.set_defaults(func=handle_experiment)
 
     # --- Command 3:  ---
     # parser_calc = subparsers.add_parser('eval', help='Evaluate the llm answers')
