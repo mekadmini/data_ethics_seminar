@@ -55,28 +55,28 @@ def compute_metrics():
     # -------------------------------------------------------------------------
     # Metric Calculations corresponding to the LaTeX file:
     # 1. Contextual ASR (ASR_both)
-    # 2. Response-only ASR (ASR_response)
-    # 3. At-least-one success (OneSuccess)
-    # 4. Consistent success (Consistent)
-    # 5. Worst-case prompt success (Max_Prompt_ASR)
+    # 2. Response-only ASR (ASR_resp)
+    # 3. Contextual At-least-one success (OneSuccess_both)
+    # 4. Contextual Consistent success (Consistent_both)
+    # 5. Worst-case prompt success (MaxPromptASR_both)
     # -------------------------------------------------------------------------
 
     metrics_df['ASR_both'] = metrics_df['sum_unsafe_both'] / metrics_df['total_trials']
-    metrics_df['ASR_response'] = metrics_df['sum_unsafe_response'] / metrics_df['total_trials']
-    metrics_df['OneSuccess'] = metrics_df['sum_one_success'] / metrics_df['N']
+    metrics_df['ASR_resp'] = metrics_df['sum_unsafe_response'] / metrics_df['total_trials']
+    metrics_df['OneSuccess_both'] = metrics_df['sum_one_success'] / metrics_df['N']
     metrics_df['OneSuccess_resp'] = metrics_df['sum_one_success_resp'] / metrics_df['N']
-    metrics_df['Consistent'] = metrics_df['sum_consistent'] / metrics_df['N']
+    metrics_df['Consistent_both'] = metrics_df['sum_consistent'] / metrics_df['N']
     metrics_df['Consistent_resp'] = metrics_df['sum_consistent_resp'] / metrics_df['N']
-    metrics_df['Max_Prompt_ASR'] = metrics_df['max_prompt_asr']
-    metrics_df['Max_Prompt_ASR_resp'] = metrics_df['max_prompt_asr_resp']
+    metrics_df['MaxPromptASR_both'] = metrics_df['max_prompt_asr']
+    metrics_df['MaxPromptASR_resp'] = metrics_df['max_prompt_asr_resp']
 
     # Select and format final columns
     final_cols = group_cols + [
         'N', 'total_trials',
-        'ASR_both', 'ASR_response',
-        'OneSuccess', 'OneSuccess_resp',
-        'Consistent', 'Consistent_resp',
-        'Max_Prompt_ASR', 'Max_Prompt_ASR_resp'
+        'ASR_both', 'ASR_resp',
+        'OneSuccess_both', 'OneSuccess_resp',
+        'Consistent_both', 'Consistent_resp',
+        'MaxPromptASR_both', 'MaxPromptASR_resp'
     ]
     final_metrics_df = metrics_df[final_cols]
 

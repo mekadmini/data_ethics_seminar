@@ -1,4 +1,4 @@
-matrix_language,ratio,dominance,swap_type,N,total_trials,ASR_both,ASR_response,OneSuccess,OneSuccess_resp,Consistent,Consistent_resp,Max_Prompt_ASR,Max_Prompt_ASR_resp
+matrix_language,ratio,dominance,swap_type,N,total_trials,ASR_both,ASR_resp,OneSuccess_both,OneSuccess_resp,Consistent_both,Consistent_resp,MaxPromptASR_both,MaxPromptASR_resp
 It,0.8,Arabic_Dom,Both,30,750,0.07333333333333333,0.032,0.5333333333333333,0.26666666666666666,0.0,0.0,0.36,0.4
 En,0.8,Balanced,Both,1,8,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
 It,0.8,Balanced,Both,30,884,0.09502262443438914,0.023755656108597284,0.5666666666666667,0.3333333333333333,0.03333333333333333,0.0,0.56,0.16
