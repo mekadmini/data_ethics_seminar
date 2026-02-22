@@ -1,0 +1,15 @@
+{
+    "experiment_name": "baseline_it",
+    "dataset_split": "train[:30]",
+    "iterations": 5,
+    "translation_iterations": 1,
+    "max_workers": 4,
+    "target_model": "llama3",
+    "judge_model": "llama-guard3",
+    "n_repeat": 1,
+    "matrix_language": "it",
+    "swap_ratio": 0.0,
+    "embedded_languages": [],
+    "content_swaps": false,
+    "func_swaps": false
+}
