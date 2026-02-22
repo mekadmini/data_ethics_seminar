@@ -1,0 +1,30 @@
+{
+    "matrix_language": "en",
+    "batch_size": 10,
+    "content_swaps": true,
+    "func_swaps": true,
+    "dataset_split": "train[:30]",
+    "iterations": 5,
+    "translation_iterations": 5,
+    "use_google_api": false,
+    "max_workers": 4,
+    "target_model": "llama3",
+    "judge_model": "llama-guard3",
+    "name": "En_Ratio_0.8_Arabic_Dom_Both",
+    "swap_ratio": 0.8,
+    "embedded_languages": [
+        "ar",
+        "el",
+        "es",
+        "ja"
+    ],
+    "language_weights": {
+        "ar": 0.7,
+        "el": 0.1,
+        "es": 0.1,
+        "ja": 0.1
+    },
+    "output_dir": "experiment_results/study_20260222_003257/En_Ratio_0.8_Arabic_Dom_Both",
+    "experiment_name": "En_Ratio_0.8_Arabic_Dom_Both",
+    "input_dir": "experiment_results/study_20260222_003257/En_Ratio_0.8_Arabic_Dom_Both"
+}
