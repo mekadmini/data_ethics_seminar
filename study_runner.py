@@ -64,7 +64,7 @@ def run_study(use_google=False, max_workers=4, resume_from=None, target_model="l
     swap_ratios = [0.8]
 
     # Matrix languages to test
-    matrix_languages = [MatrixLanguage.ITALIAN, MatrixLanguage.ENGLISH]
+    matrix_languages = [MatrixLanguage.ITALIAN]
 
     # Embedded languages pool
     embedded_pool = [EmbeddedLanguage.ARABIC, EmbeddedLanguage.GREEK, EmbeddedLanguage.SPANISH,
