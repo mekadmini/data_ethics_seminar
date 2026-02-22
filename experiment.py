@@ -23,12 +23,12 @@ class OllamaHandler:
             return f"[ERROR] {str(e)}"
 
 
-def generate_and_save_stream(input_csv, output_csv, prompt_col, model_name, iterations=1, max_workers=4):
+def generate_and_save_stream(input_csv, output_csv, prompt_col, model_name, iterations=1, max_workers=4, n_repeat=1):
     """
     Stage 1: Reads prompts, generates answers, and appends to CSV immediately.
     Supports parallel execution and resuming from previous runs.
     """
-    print(f"🚀 STAGE 1: Generating with {model_name} (Iterations: {iterations}, Threads: {max_workers})...")
+    print(f"🚀 STAGE 1: Generating with {model_name} (Iterations: {iterations}, Threads: {max_workers}, N-Repeat: {n_repeat})...")
 
     if not os.path.exists(input_csv):
         raise FileNotFoundError(f"Input file {input_csv} not found.")
@@ -77,8 +77,10 @@ def generate_and_save_stream(input_csv, output_csv, prompt_col, model_name, iter
         text, iter_num = item
         try:
             if text.strip():
+                # Concatenate prompt n_repeat times
+                prompt_to_send = "\n".join([text] * n_repeat)
                 # Reverted: No system prompt injection. Let the model respond naturally.
-                response = handler.chat([{'role': 'user', 'content': text}])
+                response = handler.chat([{'role': 'user', 'content': prompt_to_send}])
             else:
                 response = ""
             return (text, response, iter_num)

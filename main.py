@@ -138,10 +138,15 @@ def run_experiment(args=None, input_dir="experiment_results"):
     iterations = 1
     if args and hasattr(args, 'iterations') and args.iterations:
         iterations = args.iterations
-
-    # Or if passed as a dict/object differently
-    if isinstance(args, dict) and 'iterations' in args:
+    elif isinstance(args, dict) and 'iterations' in args:
         iterations = args['iterations']
+
+    # Allow n_repeat from args
+    n_repeat = 1
+    if args and hasattr(args, 'n_repeat') and args.n_repeat:
+        n_repeat = args.n_repeat
+    elif isinstance(args, dict) and 'n_repeat' in args:
+        n_repeat = args['n_repeat']
 
     # Allow max_workers from args
     max_workers = 4
@@ -180,7 +185,8 @@ def run_experiment(args=None, input_dir="experiment_results"):
         prompt_col=PROMPT_COL,
         model_name=TARGET_MODEL,
         iterations=iterations,
-        max_workers=max_workers
+        max_workers=max_workers,
+        n_repeat=n_repeat
     )
 
     # 2. Run Evaluation (Reads the saved file)
@@ -214,6 +220,7 @@ def main():
     parser_calc.add_argument('--input_dir', type=str, default='experiment_results',
                              help='Directory containing prompts.csv')
     parser_calc.add_argument('--iterations', type=int, default=1, help='Number of iterations per prompt')
+    parser_calc.add_argument('--n_repeat', type=int, default=1, help='Number of times to repeat the prompt')
     parser_calc.add_argument('--max_workers', type=int, default=4, help='Number of parallel threads')
     parser_calc.add_argument('--target_model', type=str, default='llama3', help='Target Ollama model')
     parser_calc.add_argument('--judge_model', type=str, default='llama-guard3', help='Safety judge Ollama model')

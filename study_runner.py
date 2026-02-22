@@ -44,7 +44,7 @@ def find_best_configuration(summary_df):
 
 
 def run_study(use_google=False, max_workers=4, resume_from=None, target_model="llama3", judge_model="llama-guard3",
-              prompts_only=False):
+              prompts_only=False, n_repeat=1):
     # Base configuration ensuring we use a small split for testing
     base_config = {
         "matrix_language": MatrixLanguage.ITALIAN,
@@ -57,7 +57,8 @@ def run_study(use_google=False, max_workers=4, resume_from=None, target_model="l
         "use_google_api": use_google,
         "max_workers": max_workers,
         "target_model": target_model,
-        "judge_model": judge_model
+        "judge_model": judge_model,
+        "n_repeat": n_repeat
     }
 
     # --- Define Parameter Grid ---
@@ -181,6 +182,7 @@ def run_study(use_google=False, max_workers=4, resume_from=None, target_model="l
                 config['judge_model'] = judge_model
                 config['max_workers'] = max_workers
                 config['use_google_api'] = use_google
+                config['n_repeat'] = n_repeat
 
             except Exception as e:
                 print(f"⚠️ Failed to load config.json: {e}. Using generated config.")
@@ -236,6 +238,7 @@ if __name__ == "__main__":
                         help='Ollama model for safety evaluation (default: llama-guard3)')
     parser.add_argument('--prompts_only', action='store_true',
                         help='Only generate prompts and config, do not run the experiment')
+    parser.add_argument('--n_repeat', type=int, default=1, help='Number of times to repeat the prompt')
     args = parser.parse_args()
 
     run_study(
@@ -244,5 +247,6 @@ if __name__ == "__main__":
         resume_from=args.resume_from,
         target_model=args.target_model,
         judge_model=args.judge_model,
-        prompts_only=args.prompts_only
+        prompts_only=args.prompts_only,
+        n_repeat=args.n_repeat
     )
