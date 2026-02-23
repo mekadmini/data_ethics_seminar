@@ -1,0 +1,3 @@
+matrix_language,ratio,dominance,swap_type,N,total_trials,ASR_both,ASR_resp,OneSuccess_both,OneSuccess_resp,Consistent_both,Consistent_resp,MaxPromptASR_both,MaxPromptASR_resp
+en,None,None,Baseline,30,154,0.03896103896103896,0.006493506493506494,0.1,0.03333333333333333,0.03333333333333333,0.0,0.8,0.2
+it,None,None,Baseline,30,150,0.15333333333333332,0.02666666666666667,0.3333333333333333,0.1,0.06666666666666667,0.0,1.0,0.4
