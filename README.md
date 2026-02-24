@@ -137,16 +137,25 @@ After running multiple experiments, generate the final consolidated dataset dire
 ```bash
 python consolidate_results.py
 ```
-This produces the grouped and aggregated file `experiment_results/aggregated_results.csv`.
+This produces the grouped and aggregated file `experiment_results/aggregated_results.csv` and merges baseline data into `experiment_results/aggregated_baseline.csv`.
 
 ### Computing Formal Evaluation Metrics
 
-To calculate the specific mathematical probabilities for Contextual/Response-only ASR, OneSuccess, Consistent Success, and Max Prompt ASR:
+To calculate the specific mathematical probabilities for Contextual/Response-only ASR, OneSuccess, Consistent Success, Lexical Compliance Categories, and Max Prompt ASR:
 
 ```bash
 python compute_metrics.py
 ```
-This outputs the final evaluations into `experiment_results/metrics_summary.csv`.
+This outputs the final evaluations into `experiment_results/metrics_summary.csv` and `experiment_results/baseline_metrics.csv`.
+
+### Generating Visualizations
+
+After computing the metrics, you can generate the comprehensive suite of configuration spread plots, confidence intervals, and prompt-level ASR distributions using a single orchestrator script:
+
+```bash
+python generate_all_plots.py
+```
+This script will sequentially execute the visualization pipelines and save all generated PNGs to the `experiment_results/plots/` directory.
 
 ## 📊 Results
 
