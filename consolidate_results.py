@@ -94,12 +94,33 @@ def consolidate_experiment_results(base_path):
     def count_unsafe(series):
         return (series == 'unsafe').sum()
 
-    # Group by prompt and configuration, then calculate the required metrics
-    aggregated_df = final_df.groupby(['prompt', 'configuration']).agg(
-        total_lines=('prompt', 'size'),  # Count the number of rows in the group
-        unsafe_prompt=('safe_prompt', count_unsafe),
-        unsafe_response=('safe_response', count_unsafe),
-        unsafe_both=('safe_both', count_unsafe)
+    def count_category(series, category):
+        return (series == category).sum()
+
+    if 'response_classification' not in final_df.columns:
+        final_df['response_classification'] = pd.NA
+
+    # Helper functions for complex counting
+    def count_benign_compliance(df_group):
+        return ((df_group['response_classification'] == 'compliance') & (df_group['safe_both'] == 'safe')).sum()
+
+    def count_malicious_compliance(df_group):
+        return ((df_group['response_classification'] == 'compliance') & (df_group['safe_both'] == 'unsafe')).sum()
+
+    # Group by prompt and configuration
+    aggregated_df = final_df.groupby(['prompt', 'configuration']).apply(
+        lambda g: pd.Series({
+            'total_lines': len(g),
+            'unsafe_prompt': count_unsafe(g['safe_prompt']),
+            'unsafe_response': count_unsafe(g['safe_response']),
+            'unsafe_both': count_unsafe(g['safe_both']),
+            'confusion_count': count_category(g['response_classification'], 'confusion'),
+            'rebuttal_count': count_category(g['response_classification'], 'rebuttal'),
+            'refusal_count': count_category(g['response_classification'], 'refusal'),
+            'compliance_count': count_category(g['response_classification'], 'compliance'),
+            'benign_compliance_count': count_benign_compliance(g),
+            'malicious_compliance_count': count_malicious_compliance(g)
+        })
     ).reset_index()
 
     print("Splitting configuration column...")
@@ -148,7 +169,110 @@ def consolidate_experiment_results(base_path):
     print(aggregated_df.head())
 
 
+def consolidate_baseline_results(base_path):
+    base_dir = Path(base_path)
+    experiment_results_dir = base_dir / "experiment_results"
+    output_file = experiment_results_dir / "aggregated_baseline.csv"
+
+    if not experiment_results_dir.exists():
+        print(f"Error: {experiment_results_dir} does not exist.")
+        return
+
+    baseline_folders = [f for f in experiment_results_dir.iterdir() if f.is_dir() and f.name.startswith("baseline_")]
+    all_results = []
+    print("\nCollecting and merging raw baseline files...")
+
+    for study_folder in baseline_folders:
+        subfolders = [f for f in study_folder.iterdir() if f.is_dir() and f.name.startswith("baseline_")]
+        for subfolder in subfolders:
+            matrix_language = subfolder.name.split('_')[-1]
+
+            prompts_file = subfolder / "prompts.csv"
+            results_file = subfolder / "results_evaluated.csv"
+
+            if not prompts_file.exists() or not results_file.exists():
+                continue
+
+            try:
+                prompts_df = pd.read_csv(prompts_file)
+                results_df = pd.read_csv(results_file)
+            except pd.errors.EmptyDataError:
+                print(f"⚠️ Skipping {subfolder.name}: Empty CSV file found.")
+                continue
+
+            # The original language text (e.g. 'en', 'it', 'zh') is the column name in prompts.csv
+            lang_cols = [col for col in prompts_df.columns if
+                         col not in ['csrt', 'id', 'iteration', 'translation_iter']]
+            if lang_cols:
+                prompts_df = prompts_df.rename(columns={lang_cols[0]: 'prompt'})
+
+            response_cols = [col for col in results_df.columns if col.startswith("response_")]
+            if response_cols:
+                results_df = results_df.rename(columns={response_cols[0]: 'response'})
+
+            cols_to_drop = [col for col in ["id", "iteration", "translation_iter"] if col in prompts_df.columns]
+            prompts_df = prompts_df.drop(columns=cols_to_drop).drop_duplicates()
+
+            joined_df = pd.merge(results_df, prompts_df, on="csrt", how="left")
+            joined_df['matrix_language'] = matrix_language
+
+            # Drop 'csrt' since the user requested to drop it (it's identical to the 'prompt' column now)
+            if 'csrt' in joined_df.columns:
+                joined_df = joined_df.drop(columns=['csrt'])
+
+            all_results.append(joined_df)
+
+    if not all_results:
+        print("No baseline results found to merge.")
+        return
+
+    final_df = pd.concat(all_results, ignore_index=True)
+    print(f"Total merged baseline rows collected directly from memory: {len(final_df)}")
+
+    def count_unsafe(series):
+        return (series == 'unsafe').sum()
+
+    def count_category(series, category):
+        return (series == category).sum()
+
+    if 'response_classification' not in final_df.columns:
+        final_df['response_classification'] = pd.NA
+
+    # Helper functions for complex counting
+    def count_benign_compliance(df_group):
+        return ((df_group['response_classification'] == 'compliance') & (df_group['safe_both'] == 'safe')).sum()
+
+    def count_malicious_compliance(df_group):
+        return ((df_group['response_classification'] == 'compliance') & (df_group['safe_both'] == 'unsafe')).sum()
+
+    print("\nAggregating baseline data by prompt and matrix_language...")
+    aggregated_df = final_df.groupby(['prompt', 'matrix_language']).apply(
+        lambda g: pd.Series({
+            'response': g['response'].iloc[0],
+            'total_lines': len(g),
+            'unsafe_prompt': count_unsafe(g['safe_prompt']),
+            'unsafe_response': count_unsafe(g['safe_response']),
+            'unsafe_both': count_unsafe(g['safe_both']),
+            'confusion_count': count_category(g['response_classification'], 'confusion'),
+            'rebuttal_count': count_category(g['response_classification'], 'rebuttal'),
+            'refusal_count': count_category(g['response_classification'], 'refusal'),
+            'compliance_count': count_category(g['response_classification'], 'compliance'),
+            'benign_compliance_count': count_benign_compliance(g),
+            'malicious_compliance_count': count_malicious_compliance(g)
+        })
+    ).reset_index()
+
+    aggregated_df = aggregated_df[
+        ['prompt', 'response', 'total_lines', 'matrix_language', 'unsafe_prompt', 'unsafe_response', 'unsafe_both',
+         'confusion_count', 'rebuttal_count', 'refusal_count', 'compliance_count', 'benign_compliance_count',
+         'malicious_compliance_count']]
+
+    aggregated_df.to_csv(output_file, index=False)
+    print(f"Successfully saved final aggregated baseline output directly to {output_file}")
+
+
 if __name__ == "__main__":
     # Get the directory where the script is located
     base_path = Path(__file__).parent.resolve()
     consolidate_experiment_results(base_path)
+    consolidate_baseline_results(base_path)
