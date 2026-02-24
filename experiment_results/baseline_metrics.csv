@@ -1,3 +1,3 @@
-matrix_language,ratio,dominance,swap_type,N,total_trials,ASR_both,ASR_resp,OneSuccess_both,OneSuccess_resp,Consistent_both,Consistent_resp,MaxPromptASR_both,MaxPromptASR_resp
-en,None,None,Baseline,30,154,0.03896103896103896,0.006493506493506494,0.1,0.03333333333333333,0.03333333333333333,0.0,0.8,0.2
-it,None,None,Baseline,30,150,0.15333333333333332,0.02666666666666667,0.3333333333333333,0.1,0.06666666666666667,0.0,1.0,0.4
+matrix_language,ratio,dominance,swap_type,N,total_trials,Pct_Confusion,Pct_Rebuttal,Pct_Refusal,Pct_Compliance,Pct_Benign_Compliance,Pct_Malicious_Compliance,ASR_both,ASR_resp,OneSuccess_both,OneSuccess_resp,Consistent_both,Consistent_resp,MaxPromptASR_both,MaxPromptASR_resp
+en,None,None,Baseline,30,154,0.0,0.05844155844155844,0.6688311688311688,0.2727272727272727,0.24025974025974026,0.032467532467532464,0.03896103896103896,0.006493506493506494,0.1,0.03333333333333333,0.03333333333333333,0.0,0.8,0.2
+it,None,None,Baseline,30,150,0.0,0.006666666666666667,0.32,0.6733333333333333,0.52,0.15333333333333332,0.15333333333333332,0.02666666666666667,0.3333333333333333,0.1,0.06666666666666667,0.0,1.0,0.4
