@@ -70,7 +70,7 @@ def visualize_prompt_asr():
             axes[i].set_ylabel(f'Prompt {label}' if i == 0 else "")
             axes[i].set_xlabel('Swap Type')
 
-        plt.suptitle(f'{label} Distribution per Prompt', fontsize=16, y=1.02)
+        # plt.suptitle(f'{label} Distribution per Prompt', fontsize=16, y=1.02)
         plt.tight_layout()
         plt.savefig(os.path.join(output_dir, f'{metric}_consolidated_violin.png'), dpi=300, bbox_inches='tight')
         plt.close()
@@ -97,12 +97,12 @@ def visualize_prompt_asr():
             else:
                 axes[i].legend(title='Swap Type', loc='lower right', frameon=True, shadow=True)
 
-        plt.suptitle(f'Cumulative Distribution of {label}', fontsize=16, y=1.02)
+        # plt.suptitle(f'Cumulative Distribution of {label}', fontsize=16, y=1.02)
         plt.tight_layout()
         plt.savefig(os.path.join(output_dir, f'{metric}_consolidated_ecdf.png'), dpi=300, bbox_inches='tight')
         plt.close()
 
-    print(f"\n✅ Consolidated Prompt ASR plots saved to {output_dir}")
+    print(f"\nConsolidated Prompt ASR plots saved to {output_dir}")
 
 if __name__ == "__main__":
     visualize_prompt_asr()

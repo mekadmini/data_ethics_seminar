@@ -106,7 +106,7 @@ def visualize_variance(csv_path='experiment_results/metrics_summary.csv',
             axes[1].legend(handles, labels, title="Dominance", loc='lower right', 
                            frameon=True, shadow=True, fontsize=10)
 
-        plt.suptitle(f'{m_label} Distribution Across All Configurations', fontsize=24, y=1.05)
+        # plt.suptitle(f'{m_label} Distribution Across All Configurations', fontsize=24, y=1.05)
         plt.tight_layout()
         plt.savefig(os.path.join(output_dir, f'{metric}_consolidated_spread.png'), dpi=300, bbox_inches='tight')
         plt.close()
@@ -141,7 +141,7 @@ def visualize_variance(csv_path='experiment_results/metrics_summary.csv',
                 axes[1].legend(handles_inter, labels_inter, title="Dominance Strategy", loc='lower right', 
                                frameon=True, shadow=True, fontsize=10)
 
-            plt.suptitle(f'Interaction Effect: {m_label} by Ratio & Dominance', fontsize=24, y=1.05)
+            # plt.suptitle(f'Interaction Effect: {m_label} by Ratio & Dominance', fontsize=24, y=1.05)
             plt.tight_layout()
             plt.savefig(os.path.join(output_dir, f'{metric}_consolidated_interaction.png'), dpi=300, bbox_inches='tight')
             plt.close()
@@ -224,7 +224,7 @@ def visualize_variance(csv_path='experiment_results/metrics_summary.csv',
         if handles:
             axes[1].legend(handles, labels, title="Dominance Strategy", loc='upper right', frameon=True, fontsize=12, title_fontsize=14)
             
-        plt.suptitle('Response Classes Distribution by Swap Type', fontsize=26, y=1.05)
+        # plt.suptitle('Response Classes Distribution by Swap Type', fontsize=26, y=1.05)
         # Prevent cutoff of bottom text labels
         plt.subplots_adjust(bottom=0.25)
         plt.savefig(os.path.join(output_dir, 'Response_Classes_consolidated_spread.png'), dpi=300, bbox_inches='tight')
@@ -274,7 +274,7 @@ def visualize_variance(csv_path='experiment_results/metrics_summary.csv',
                     labels = [m.replace('Pct_', '').replace('_', ' ') for m in available_stack]
                     axes[i].legend(labels, title="Response Class", loc='upper right', bbox_to_anchor=(1.25, 1.05), frameon=True, shadow=True, fontsize=10)
                                    
-            plt.suptitle('Average Response Class Composition by Swap Type', fontsize=24, y=1.05)
+            # plt.suptitle('Average Response Class Composition by Swap Type', fontsize=24, y=1.05)
             plt.tight_layout()
             plt.savefig(os.path.join(output_dir, 'Response_Classes_stacked_bar.png'), dpi=300, bbox_inches='tight')
             plt.close()
@@ -301,7 +301,7 @@ def visualize_variance(csv_path='experiment_results/metrics_summary.csv',
                 axes[i].tick_params(axis='x', rotation=0)
                 axes[i].tick_params(axis='y', rotation=0)
                 
-            plt.suptitle('Heatmap: Average Response Rate across Configurations', fontsize=24, y=1.05)
+            # plt.suptitle('Heatmap: Average Response Rate across Configurations', fontsize=24, y=1.05)
             plt.tight_layout()
             plt.savefig(os.path.join(output_dir, 'Response_Classes_heatmap.png'), dpi=300, bbox_inches='tight')
             plt.close()
@@ -330,7 +330,7 @@ def visualize_variance(csv_path='experiment_results/metrics_summary.csv',
                 else:
                     axes[i].legend(title="Response Class", loc='upper left', bbox_to_anchor=(1.05, 1.0), frameon=True, shadow=True, fontsize=11)
             
-            plt.suptitle('Trends in Defense & Attack Complexity', fontsize=24, y=1.05)
+            # plt.suptitle('Trends in Defense & Attack Complexity', fontsize=24, y=1.05)
             plt.tight_layout()
             plt.savefig(os.path.join(output_dir, 'Response_Classes_trend_lines.png'), dpi=300, bbox_inches='tight')
             plt.close()

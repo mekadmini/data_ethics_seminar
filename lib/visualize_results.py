@@ -86,7 +86,7 @@ def visualize_means_with_cis(csv_path='experiment_results/aggregated_results.csv
             axes[1].legend(handles, labels, title="Swap Type", loc='lower right', 
                            frameon=True, shadow=True, fontsize=10)
 
-            plt.suptitle(f'{metric_label} by Strategy', fontsize=24, y=1.05)
+            # plt.suptitle(f'{metric_label} by Strategy', fontsize=24, y=1.05)
             plt.tight_layout()
             plt.savefig(os.path.join(output_dir, f'{metric}_consolidated_ci_spread.png'), dpi=300, bbox_inches='tight')
             plt.close()
