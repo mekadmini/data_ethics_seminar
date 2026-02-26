@@ -26,13 +26,9 @@ def visualize_prompt_asr():
     df['matrix_language'] = df['matrix_language'].str.upper()
     df['swap_type'] = df['swap_type'].fillna('Baseline')
     
-    # Calculate the per-prompt percentage
+    # Calculate the per-prompt ratio
     df['prompt_asr_both'] = df['unsafe_both'] / df['total_lines']
     df['prompt_asr_resp'] = df['unsafe_response'] / df['total_lines']
-    
-    # Convert proportions to percentages for easier reading
-    df['prompt_asr_both_pct'] = df['prompt_asr_both'] * 100
-    df['prompt_asr_resp_pct'] = df['prompt_asr_resp'] * 100
     
     os.makedirs(output_dir, exist_ok=True)
     sns.set_theme(style="whitegrid", context="paper", font_scale=1.2)
@@ -43,85 +39,70 @@ def visualize_prompt_asr():
             vals.insert(0, vals.pop(vals.index('Baseline')))
         return vals
 
-    matrix_languages = df['matrix_language'].dropna().unique()
-    for ml in matrix_languages:
-        ml_label = str(ml).upper()
-        print(f"\n--- Generating Prompt Plots for Matrix Language: {ml_label} ---")
-        
-        df_ml = df[df['matrix_language'] == ml]
-        if df_ml.empty:
-            continue
+    languages = ['EN', 'IT']
+    metrics = [
+        ('prompt_asr_both', 'Contextual ASR', 'husl'),
+        ('prompt_asr_resp', 'Response-Only ASR', 'husl')
+    ]
+
+    for metric, label, cmap in metrics:
+        # Determine shared Y/X max
+        m_max = df[metric].max()
+        if pd.isna(m_max) or m_max == 0: m_max = 1.0
+        else: m_max = min(1.0, m_max * 1.15)
+
+        # 1. Consolidated Violin Plot
+        fig, axes = plt.subplots(1, 2, figsize=(18, 6), sharey=True)
+        for i, lang in enumerate(languages):
+            df_lang = df[df['matrix_language'] == lang]
+            if df_lang.empty:
+                axes[i].text(0.5, 0.5, f'No data for {lang}', ha='center')
+                continue
             
-        order = custom_sort(df_ml['swap_type'].unique())
-        
-        # Plot 1: Violin + Stripplot for unsafe_both
-        print(f"[{ml_label}] Generating Contextual ASR Violin Plot (unsafe_both)...")
-        plt.figure(figsize=(10, 6))
-        
-        # Violin plot to show density/shape of the distribution
-        sns.violinplot(data=df_ml, x='swap_type', y='prompt_asr_both_pct', order=order, 
-                       palette="viridis", inner=None, alpha=0.5, cut=0) # cut=0 keeps the violin strictly within data bounds
-        
-        # Stripplot to show the actual data points
-        sns.stripplot(data=df_ml, x='swap_type', y='prompt_asr_both_pct', order=order, 
-                      color="black", alpha=0.3, jitter=0.15, size=4)
-        
-        plt.title(f'Contextual ASR Distribution per Prompt ({ml_label})', pad=20)
-        plt.ylabel('Prompt ASR (%) [unsafe_both / total_lines]')
-        plt.xlabel('Swap Type')
-        plt.ylim(-5, 105)
+            order = custom_sort(df_lang['swap_type'].unique())
+            sns.violinplot(data=df_lang, x='swap_type', y=metric, order=order, 
+                           palette=cmap, inner=None, alpha=0.5, cut=0, ax=axes[i])
+            sns.stripplot(data=df_lang, x='swap_type', y=metric, order=order, 
+                          color="black", alpha=0.3, jitter=0.15, size=4, ax=axes[i])
+            
+            axes[i].set_title(f'{lang} Matrix', fontsize=14)
+            axes[i].set_ylim(0, m_max)
+            axes[i].set_ylabel(f'Prompt {label}' if i == 0 else "")
+            axes[i].set_xlabel('Swap Type')
+
+        plt.suptitle(f'{label} Distribution per Prompt', fontsize=16, y=1.02)
         plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, f'prompt_asr_both_violin_{ml_label}.png'), dpi=300)
-        plt.close()
-        
-        # Plot 2: ECDF Plot for unsafe_both
-        print(f"[{ml_label}] Generating Contextual ECDF Plot (unsafe_both)...")
-        plt.figure(figsize=(10, 6))
-        
-        sns.ecdfplot(data=df_ml, x='prompt_asr_both_pct', hue='swap_type', hue_order=order, palette="viridis", linewidth=2.5)
-        
-        plt.title(f'Cumulative Distribution of Contextual ASR ({ml_label})', pad=20)
-        plt.xlabel('Attack Success Rate (%)')
-        plt.ylabel('Proportion of Prompts')
-        # Add gridlines for readability
-        plt.grid(True, which='both', linestyle='--', alpha=0.6)
-        plt.xlim(-5, 105)
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, f'prompt_asr_both_ecdf_{ml_label}.png'), dpi=300)
-        plt.close()
-        
-        # Plot 3: Violin Plot for unsafe_response
-        print(f"[{ml_label}] Generating Response-Only ASR Violin Plot (unsafe_response)...")
-        plt.figure(figsize=(10, 6))
-        sns.violinplot(data=df_ml, x='swap_type', y='prompt_asr_resp_pct', order=order, 
-                       palette="magma", inner=None, alpha=0.5, cut=0)
-        sns.stripplot(data=df_ml, x='swap_type', y='prompt_asr_resp_pct', order=order, 
-                      color="black", alpha=0.3, jitter=0.15, size=4)
-        
-        plt.title(f'Response-Only ASR Distribution per Prompt ({ml_label})', pad=20)
-        plt.ylabel('Prompt ASR (%) [unsafe_response / total_lines]')
-        plt.xlabel('Swap Type')
-        plt.ylim(-5, 105)
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, f'prompt_asr_resp_violin_{ml_label}.png'), dpi=300)
+        plt.savefig(os.path.join(output_dir, f'{metric}_consolidated_violin.png'), dpi=300, bbox_inches='tight')
         plt.close()
 
-        # Plot 4: ECDF Plot for unsafe_response
-        print(f"[{ml_label}] Generating Response-Only ECDF Plot (unsafe_response)...")
-        plt.figure(figsize=(10, 6))
-        
-        sns.ecdfplot(data=df_ml, x='prompt_asr_resp_pct', hue='swap_type', hue_order=order, palette="magma", linewidth=2.5)
-        
-        plt.title(f'Cumulative Distribution of Response-Only ASR ({ml_label})', pad=20)
-        plt.xlabel('Attack Success Rate (%)')
-        plt.ylabel('Proportion of Prompts')
-        plt.grid(True, which='both', linestyle='--', alpha=0.6)
-        plt.xlim(-5, 105)
+        # 2. Consolidated ECDF Plot
+        fig, axes = plt.subplots(1, 2, figsize=(18, 6), sharey=True)
+        for i, lang in enumerate(languages):
+            df_lang = df[df['matrix_language'] == lang]
+            if df_lang.empty:
+                axes[i].text(0.5, 0.5, f'No data for {lang}', ha='center')
+                continue
+            
+            order = custom_sort(df_lang['swap_type'].unique())
+            sns.ecdfplot(data=df_lang, x=metric, hue='swap_type', hue_order=order, palette=cmap, linewidth=2.5, ax=axes[i])
+            
+            axes[i].set_title(f'{lang} Matrix', fontsize=14)
+            axes[i].set_xlim(0, m_max)
+            axes[i].set_xlabel(f'{label} Rate')
+            axes[i].set_ylabel('Proportion of Prompts' if i == 0 else "")
+            axes[i].grid(True, which='both', linestyle='--', alpha=0.6)
+            
+            if i == 0:
+                axes[i].get_legend().remove()
+            else:
+                axes[i].legend(title='Swap Type', loc='lower right', frameon=True, shadow=True)
+
+        plt.suptitle(f'Cumulative Distribution of {label}', fontsize=16, y=1.02)
         plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, f'prompt_asr_resp_ecdf_{ml_label}.png'), dpi=300)
+        plt.savefig(os.path.join(output_dir, f'{metric}_consolidated_ecdf.png'), dpi=300, bbox_inches='tight')
         plt.close()
-        
-    print(f"\n✅ All Prompt ASR scatter plots saved to {output_dir}")
+
+    print(f"\n✅ Consolidated Prompt ASR plots saved to {output_dir}")
 
 if __name__ == "__main__":
     visualize_prompt_asr()

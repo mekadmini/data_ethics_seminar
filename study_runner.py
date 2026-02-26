@@ -28,10 +28,10 @@ def run_study(use_google=False, max_workers=4, resume_from=None, target_model="l
     }
 
     # --- Define Parameter Grid ---
-    swap_ratios = [0.8]
+    swap_ratios = [0.6]
 
     # Matrix languages to test
-    matrix_languages = [MatrixLanguage.ITALIAN]
+    matrix_languages = [MatrixLanguage.ENGLISH, MatrixLanguage.ITALIAN]
 
     # Embedded languages pool
     embedded_pool = [EmbeddedLanguage.ARABIC, EmbeddedLanguage.GREEK, EmbeddedLanguage.SPANISH,
@@ -55,6 +55,8 @@ def run_study(use_google=False, max_workers=4, resume_from=None, target_model="l
             lang_name = "Spanish"
         elif lang == EmbeddedLanguage.JAPANESE:
             lang_name = "Japanese"
+        elif lang == EmbeddedLanguage.ITALIAN:
+            lang_name = "Italian"
 
         strat_key = f"{lang_name}_Dom"
 
@@ -69,8 +71,8 @@ def run_study(use_google=False, max_workers=4, resume_from=None, target_model="l
     # Define filter configurations
     filter_configs = [
         ("Both", {"content_swaps": True, "func_swaps": True}),
-        ("FuncOnly", {"content_swaps": False, "func_swaps": True}),
-        ("ContentOnly", {"content_swaps": True, "func_swaps": False})
+      #  ("FuncOnly", {"content_swaps": False, "func_swaps": True}),
+      #  ("ContentOnly", {"content_swaps": True, "func_swaps": False})
     ]
 
     study_scenarios = []

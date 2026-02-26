@@ -1,0 +1,25 @@
+{
+    "matrix_language": "en",
+    "batch_size": 10,
+    "content_swaps": true,
+    "func_swaps": false,
+    "dataset_split": "train[:30]",
+    "iterations": 5,
+    "translation_iterations": 5,
+    "use_google_api": false,
+    "max_workers": 4,
+    "target_model": "llama3",
+    "judge_model": "llama-guard3",
+    "n_repeat": 1,
+    "name": "En_Ratio_0.8_Italian_Dom_ContentOnly",
+    "swap_ratio": 0.8,
+    "embedded_languages": [
+        "it"
+    ],
+    "language_weights": {
+        "it": 1
+    },
+    "output_dir": "experiment_results/study_20260223_184618\\En_Ratio_0.8_Italian_Dom_ContentOnly",
+    "experiment_name": "En_Ratio_0.8_Italian_Dom_ContentOnly",
+    "input_dir": "experiment_results/study_20260223_184618\\En_Ratio_0.8_Italian_Dom_ContentOnly"
+}
