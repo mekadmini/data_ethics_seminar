@@ -1,13 +1,9 @@
-import os
-import pandas as pd
-from pathlib import Path
-from tqdm import tqdm
 import re
+from pathlib import Path
 
-# ⚡ Blazing-fast Regex Heuristic Classifier
-# This runs in ~2 seconds for 50,000 rows, bypassing neural network CPU bottlenecks entirely.
+import pandas as pd
+from tqdm import tqdm
 
-# Llama 3 has a highly sanitized, predictable dictionary for refusals.
 REFUSAL_TERMS = [
     r"i cannot fulfill", r"i cannot provide", r"i cannot assist", r"i am unable to",
     r"i will not", r"as an ai", r"as a language model", r"i'm sorry, but", r"i apologize, but",

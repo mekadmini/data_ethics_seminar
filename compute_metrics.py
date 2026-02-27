@@ -30,7 +30,8 @@ def compute_dataframe_metrics(df, group_cols, is_baseline=False):
                 return None
 
     # Ensure classification columns exist for aggregation compatibility
-    for col in ['confusion_count', 'rebuttal_count', 'refusal_count', 'compliance_count', 'benign_compliance_count', 'malicious_compliance_count']:
+    for col in ['confusion_count', 'rebuttal_count', 'refusal_count', 'compliance_count', 'benign_compliance_count',
+                'malicious_compliance_count']:
         if col not in df.columns:
             df[col] = 0
 
@@ -110,7 +111,8 @@ def compute_metrics():
         print(f"Loading {baseline_file}...")
         df_base = pd.read_csv(baseline_file)
         print("Computing baseline metrics based on equations...")
-        metrics_base = compute_dataframe_metrics(df_base, ['matrix_language', 'ratio', 'dominance', 'swap_type'], is_baseline=True)
+        metrics_base = compute_dataframe_metrics(df_base, ['matrix_language', 'ratio', 'dominance', 'swap_type'],
+                                                 is_baseline=True)
         if metrics_base is not None:
             # Sort for readability
             metrics_base = metrics_base.sort_values(by=['matrix_language'])

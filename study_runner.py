@@ -3,8 +3,6 @@ import json
 import os
 from datetime import datetime
 
-import pandas as pd
-
 from lib.custom_types import MatrixLanguage, EmbeddedLanguage
 from main import generate_prompts, run_experiment
 
@@ -28,7 +26,7 @@ def run_study(use_google=False, max_workers=4, resume_from=None, target_model="l
     }
 
     # --- Define Parameter Grid ---
-    swap_ratios = [0.6]
+    swap_ratios = [0.8, 0.6, 0.3, 0,1]
 
     # Matrix languages to test
     matrix_languages = [MatrixLanguage.ENGLISH, MatrixLanguage.ITALIAN]
@@ -71,8 +69,8 @@ def run_study(use_google=False, max_workers=4, resume_from=None, target_model="l
     # Define filter configurations
     filter_configs = [
         ("Both", {"content_swaps": True, "func_swaps": True}),
-      #  ("FuncOnly", {"content_swaps": False, "func_swaps": True}),
-      #  ("ContentOnly", {"content_swaps": True, "func_swaps": False})
+        ("FuncOnly", {"content_swaps": False, "func_swaps": True}),
+        ("ContentOnly", {"content_swaps": True, "func_swaps": False})
     ]
 
     study_scenarios = []

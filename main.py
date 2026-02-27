@@ -8,7 +8,8 @@ from lib.custom_types import MatrixLanguage, EmbeddedLanguage
 from prompt_generator import save_experiment, DatasetSwapper
 
 
-def generate_prompts(config=None, use_google_api=None, dataset_split=None, translation_iterations=None, batch_size=None, output_dir=None):
+def generate_prompts(config=None, use_google_api=None, dataset_split=None, translation_iterations=None, batch_size=None,
+                     output_dir=None):
     # --- 1. Configuration ---
     if config is None:
         # Default config if none provided (e.g. running from CLI without granular args)
@@ -131,12 +132,12 @@ def generate_prompts(config=None, use_google_api=None, dataset_split=None, trans
 
 
 def run_experiment(
-    input_dir="experiment_results",
-    iterations=1,
-    n_repeat=1,
-    max_workers=4,
-    target_model="llama3",
-    judge_model="llama-guard3"
+        input_dir="experiment_results",
+        iterations=1,
+        n_repeat=1,
+        max_workers=4,
+        target_model="llama3",
+        judge_model="llama-guard3"
 ):
     INPUT_FILE = f"{input_dir}/prompts.csv"
     INTERMEDIATE_FILE = f"{input_dir}/results_raw.csv"
@@ -179,6 +180,7 @@ def handle_generate(args):
         batch_size=args.batch_size
     )
 
+
 def handle_experiment(args):
     run_experiment(
         input_dir=args.input_dir,
@@ -188,6 +190,7 @@ def handle_experiment(args):
         target_model=args.target_model,
         judge_model=args.judge_model
     )
+
 
 def main():
     parser = argparse.ArgumentParser(description="LeakyGPT clt")

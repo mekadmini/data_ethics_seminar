@@ -2,7 +2,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
-import numpy as np
 
 def visualize_variance(csv_path='experiment_results/metrics_summary.csv', 
                        baseline_metrics_path='experiment_results/baseline_metrics.csv',

@@ -2,7 +2,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
-import numpy as np
 
 def visualize_means_with_cis(csv_path='experiment_results/aggregated_results.csv', 
                              baseline_path='experiment_results/aggregated_baseline.csv',

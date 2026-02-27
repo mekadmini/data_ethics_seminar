@@ -1,10 +1,6 @@
 class MatrixLanguage:
     ENGLISH = "en"
-    FRENCH = "fr"
-    GERMAN = "de"
-    GREEK = "el"
     ITALIAN = "it"
-    SPANISH = "es"
 
 
 class EmbeddedLanguage:

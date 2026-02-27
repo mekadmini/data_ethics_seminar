@@ -1,5 +1,7 @@
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
+
 
 def search_data(base_path, search_term, column_name):
     base_dir = Path(base_path)
@@ -11,7 +13,8 @@ def search_data(base_path, search_term, column_name):
         return
 
     # Find all study folders (both study_ and baseline_)
-    study_folders = [f for f in experiment_results_dir.iterdir() if f.is_dir() and (f.name.startswith("study_") or f.name.startswith("baseline_"))]
+    study_folders = [f for f in experiment_results_dir.iterdir() if
+                     f.is_dir() and (f.name.startswith("study_") or f.name.startswith("baseline_"))]
 
     all_results = []
     print("Collecting and merging raw files into one big dataframe...")
@@ -31,14 +34,16 @@ def search_data(base_path, search_term, column_name):
                     continue
 
                 # Locate the original language text (e.g. 'en', 'it', 'zh')
-                lang_cols = [col for col in prompts_df.columns if col not in ['csrt', 'id', 'iteration', 'translation_iter']]
+                lang_cols = [col for col in prompts_df.columns if
+                             col not in ['csrt', 'id', 'iteration', 'translation_iter']]
                 if lang_cols:
                     prompts_df = prompts_df.rename(columns={lang_cols[0]: 'original_prompt'})
                 else:
                     prompts_df['original_prompt'] = pd.NA
 
                 # Locate the response column
-                response_cols = [col for col in results_df.columns if col.startswith("response_") and col != "response_classification"]
+                response_cols = [col for col in results_df.columns if
+                                 col.startswith("response_") and col != "response_classification"]
                 if response_cols:
                     results_df = results_df.rename(columns={response_cols[0]: 'response'})
                 else:
@@ -46,11 +51,11 @@ def search_data(base_path, search_term, column_name):
 
                 # Merge on the code switched prompt ('csrt')
                 joined_df = pd.merge(results_df, prompts_df, on="csrt", how="left")
-                
+
                 # Add useful metadata columns to filter on later
                 joined_df["study_name"] = study_folder.name
                 joined_df["configuration"] = subfolder.name
-                
+
                 all_results.append(joined_df)
 
     if not all_results:
@@ -64,7 +69,8 @@ def search_data(base_path, search_term, column_name):
     print(f"Total merged rows collected: {len(final_df)}")
 
     # Reorder columns to make it easy to read (putting the most important ones up front)
-    front_cols = ['study_name', 'configuration', 'id', 'translation_iter', 'original_prompt', 'csrt', 'response', 'response_classification']
+    front_cols = ['study_name', 'configuration', 'id', 'translation_iter', 'original_prompt', 'csrt', 'response',
+                  'response_classification']
     front_cols = [c for c in front_cols if c in final_df.columns]
     other_cols = [c for c in final_df.columns if c not in front_cols]
     final_df = final_df[front_cols + other_cols]
