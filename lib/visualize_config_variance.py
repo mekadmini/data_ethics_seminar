@@ -41,7 +41,7 @@ def visualize_variance(csv_path='experiment_results/metrics_summary.csv',
         'Greek_Dom': "#7B1B82",    # Purple/magenta
         'Japanese_Dom': "#F1495A", # Bright red
         'Spanish_Dom': "#FF804D",  # Vibrant orange
-        'Baseline': "#FFBF80"      # Light peach/orange
+        'Baseline': "#ed0c0c"      # Light peach/orange
     }
 
     # If any dominance strategies are missing in the map, fill with magma
@@ -79,16 +79,23 @@ def visualize_variance(csv_path='experiment_results/metrics_summary.csv',
                 axes[i].text(0.5, 0.5, f'No data for {lang}', ha='center')
                 continue
             
-            order = custom_sort(df_lang['swap_type'].unique())
+            df_baseline = df_lang[df_lang['swap_type'] == 'Baseline']
+            df_lang_plot = df_lang[df_lang['swap_type'] != 'Baseline']
+            
+            order = custom_sort(df_lang_plot['swap_type'].unique())
             
             # Boxplot with reference styling (light-gray/greenish fills)
-            sns.boxplot(data=df_lang, x='swap_type', y=metric, order=order, 
+            sns.boxplot(data=df_lang_plot, x='swap_type', y=metric, order=order, 
                         ax=axes[i], color="#B2D8D8", boxprops=dict(alpha=0.6))
             
             # Swarmplot with beauty: colored by dominance using the manual palette
-            sns.swarmplot(data=df_lang, x='swap_type', y=metric, hue='dominance', 
-                          hue_order=dom_strategies, palette=color_palette, 
+            sns.swarmplot(data=df_lang_plot, x='swap_type', y=metric, hue='dominance', 
+                          hue_order=[s for s in dom_strategies if s != 'Baseline'], palette=color_palette, 
                           order=order, ax=axes[i], size=7, alpha=0.9, dodge=False)
+            
+            if not df_baseline.empty:
+                baseline_val = df_baseline[metric].mean()
+                axes[i].axhline(baseline_val, color=color_palette.get('Baseline', '#FFBF80'), linestyle='--', linewidth=2.5, label='Baseline')
             
             axes[i].set_title(f'{lang} Matrix', fontsize=20, pad=15)
             axes[i].set_ylim(0, y_max)
@@ -109,6 +116,51 @@ def visualize_variance(csv_path='experiment_results/metrics_summary.csv',
         # plt.suptitle(f'{m_label} Distribution Across All Configurations', fontsize=24, y=1.05)
         plt.tight_layout()
         plt.savefig(os.path.join(output_dir, f'{metric}_consolidated_spread.png'), dpi=300, bbox_inches='tight')
+        plt.close()
+
+        # 1.5 Consolidated Bar Plot with Dominance
+        fig, axes = plt.subplots(1, 2, figsize=(20, 8), sharey=True)
+        handles_bar, labels_bar = [], []
+        
+        for i, lang in enumerate(languages):
+            df_lang = df[df['matrix_language'] == lang]
+            if df_lang.empty:
+                axes[i].text(0.5, 0.5, f'No data for {lang}', ha='center')
+                continue
+            
+            df_baseline = df_lang[df_lang['swap_type'] == 'Baseline']
+            df_lang_plot = df_lang[df_lang['swap_type'] != 'Baseline']
+            
+            order = custom_sort(df_lang_plot['swap_type'].unique())
+            
+            sns.barplot(data=df_lang_plot, x='swap_type', y=metric, hue='dominance',
+                        hue_order=[s for s in dom_strategies if s != 'Baseline'],
+                        palette=color_palette, order=order, ax=axes[i], alpha=0.85, ci=95, capsize=0.05)
+            
+            if not df_baseline.empty:
+                baseline_val = df_baseline[metric].mean()
+                axes[i].axhline(baseline_val, color=color_palette.get('Baseline', '#FFBF80'), linestyle='--', linewidth=2.5, label='Baseline')
+            
+            axes[i].set_title(f'{lang} Matrix', fontsize=20, pad=15)
+            axes[i].set_ylim(0, y_max)
+            axes[i].set_ylabel(m_label if i == 0 else "")
+            axes[i].set_xlabel("Swap Type")
+            axes[i].tick_params(axis='x', rotation=15)
+            
+            h, l = axes[i].get_legend_handles_labels()
+            if h:
+                # Ensure Baseline is only in the legend if we added its handle explicitly
+                # Wait, axes[i].axhline returns a Line2D which doesn't get automatically added to the handles from sns if custom, but since we set label='Baseline', it might.
+                handles_bar, labels_bar = h, l
+            axes[i].get_legend().remove()
+
+        if handles_bar:
+            # Reorder legend to put Baseline at the end if it's there
+            axes[1].legend(handles_bar, labels_bar, title="Dominance Strategy", loc='upper right', 
+                           frameon=True, shadow=True, fontsize=10)
+
+        plt.tight_layout()
+        plt.savefig(os.path.join(output_dir, f'{metric}_consolidated_dominance_bars.png'), dpi=300, bbox_inches='tight')
         plt.close()
 
         # 2. Consolidated Interaction Plot
